@@ -5,6 +5,8 @@ const WanTx = wanutil.wanchainTx
 const ethTx = require('ethereumjs-tx');
 const assert = require('assert')
 const args = require("optimist").argv;
+const sendEmail = require('./send-email').sendEmail;
+
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
         addr:"0xf1cf205442bea02e51e2c68ff4cc698e5879663c"
@@ -403,7 +405,8 @@ async function getAvgRewardRatio(){
         let posCap = await pos.methods.getHardCap(epochID*3600*24).call()
         console.log("pos hard:", web3.utils.toBN(posCap[0]).div(web3.utils.toBN(10000)).toString(10))
 }
-async function main(){
+
+async function check(){
         await init();
         //await checkTm();
         //await checkCross();
@@ -415,6 +418,27 @@ async function main(){
                 await verifyDepositCurrent(grId)
                 await checkSmgIncentive(grId);
         }
+}
+
+async function main(){
+        let htmlString=""
+        let subject = ""
+        try {
+                await check()
+                htmlString += "check OK"
+                subject += "openstoreman check OK"
+                console.log("openstoreman check OK.")
+        }catch(err){
+                console.log("openstoreman check error:", err)
+                htmlString += err
+                subject += "openstoreman check failed"
+        }
+
+        sendEmail({
+                subject: subject,
+                html: htmlString
+        });
+
 }
 main();
 
