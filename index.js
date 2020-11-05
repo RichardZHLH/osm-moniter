@@ -5,48 +5,55 @@ const WanTx = wanutil.wanchainTx
 const ethTx = require('ethereumjs-tx');
 const assert = require('assert')
 const args = require("optimist").argv;
-const sendEmail = require('./send-email').sendEmail;
+//const sendEmail = require('./send-email').sendEmail;
 
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
         addr:"0xf1cf205442bea02e51e2c68ff4cc698e5879663c"
 }
-let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.2:8545")) 
 const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-let crossScAddr = '0x62dE27e16f6f31d9Aa5B02F4599Fc6E21B339e79'.toLowerCase();
-let oracleAddr = '0xF728FB2e26Be1f12496d9F68BDDFe1Eac0eBFD26'.toLowerCase();
-let quotaAddr = '0x7585c2ae6a3F3B2998103cB7040F811B550C9930';
-let tokenManagerAddr = '0x017aB6485fF91C1A0a16B90E71f92B935B7213d3';
-let smgAdminAddr = '0xaa5a0f7f99fa841f410aafd97e8c435c75c22821';
-let listGroupAddr = '0x83C4F86124329040dDdb936bffa211Ce460aCb9E';
 
-let gpkAddr= '0xf0bFfF373EEF7b787f5aecb808A59dF714e2a6E7';
-let metricAddr = '0x869276043812B459Cc9d11E255Fb0097D51846EF';
-let PosLibAddr = "0x4Ec1e3c0aB865707eEc5F9a97Bcaee2E39b8a2De"
-let WrcEthOnWanAddr = "0x48344649b9611a891987b2db33faada3ac1d05ec"
+
 let wan_atEth = ""
  
-let groupId = "0x000000000000000000000000000000000000000000746573746e65745f303037"   
-let KnownCap = {
-        "0x5c770cbf582d770b93ca90adad7e6bd33fabc44c": "400000000000000000000",
-        "0xef1df88ab86ce47bacb01ccb52818e87dde08137": "100000000000000000000",
-        "0x5e97f046fc50c094a437c6aa15c72a69625d297b": "100000000000000000000",
-}
-const mainnet = args.mainnet
-if(mainnet){
-        smgAdminAddr = '0x1E7450D5d17338a348C5438546f0b4D0A5fbeaB6';
-        gpkAddr= '0xFC86Ad558163C4933eBCfA217945aF6e9a3bcE06';
-        listGroupAddr = '0x8113a9373BD319A05b607747f396CA8e78e8F5B9';
-        PosLibAddr = "0xe5D05F0C52DAe635B8bd2e5AFAF5c72369920B39"
-        metricAddr = '0xd5e61e4069c013a444e962dbd489d845b9Ae2727';
-        KnownCap = {}
-        web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
-        groupId = "0x000000000000000000000000000000000000000000000041726965735f303030"   
-}
 
+const testnet = args.testnet
+let smgAdminAddr = '0x1E7450D5d17338a348C5438546f0b4D0A5fbeaB6';
+let gpkAddr= '0xFC86Ad558163C4933eBCfA217945aF6e9a3bcE06';
+let listGroupAddr = '0x8113a9373BD319A05b607747f396CA8e78e8F5B9';
+let PosLibAddr = "0xe5D05F0C52DAe635B8bd2e5AFAF5c72369920B39"
+let metricAddr = '0xd5e61e4069c013a444e962dbd489d845b9Ae2727';
+let tokenManagerAddr = ""
+let quotaAddr = ""
+let crossScAddr = ""
+let KnownCap = {}
+let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
+let groupId = "0x000000000000000000000000000000000000000000000041726965735f303030"   
+
+if(testnet) {
+        crossScAddr = '0x62dE27e16f6f31d9Aa5B02F4599Fc6E21B339e79'.toLowerCase();
+        oracleAddr = '0xF728FB2e26Be1f12496d9F68BDDFe1Eac0eBFD26'.toLowerCase();
+        quotaAddr = '0x7585c2ae6a3F3B2998103cB7040F811B550C9930';
+        tokenManagerAddr = '0x017aB6485fF91C1A0a16B90E71f92B935B7213d3';
+        smgAdminAddr = '0xaa5a0f7f99fa841f410aafd97e8c435c75c22821';
+        listGroupAddr = '0x83C4F86124329040dDdb936bffa211Ce460aCb9E';
+
+        gpkAddr= '0xf0bFfF373EEF7b787f5aecb808A59dF714e2a6E7';
+        metricAddr = '0x869276043812B459Cc9d11E255Fb0097D51846EF';
+        PosLibAddr = "0x4Ec1e3c0aB865707eEc5F9a97Bcaee2E39b8a2De"
+        WrcEthOnWanAddr = "0x48344649b9611a891987b2db33faada3ac1d05ec"
+        KnownCap = {
+                "0x5c770cbf582d770b93ca90adad7e6bd33fabc44c": "400000000000000000000",
+                "0xef1df88ab86ce47bacb01ccb52818e87dde08137": "100000000000000000000",
+                "0x5e97f046fc50c094a437c6aa15c72a69625d297b": "100000000000000000000",
+        }
+        groupId = "0x000000000000000000000000000000000000000000746573746e65745f303037"   
+        web3 = new Web3(new Web3.providers.HttpProvider("http://52.35.168.75:36891")) 
+
+}
 
 let tm,smg,quota,metric,pos,listGroup,wrc20;
 
