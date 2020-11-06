@@ -5,7 +5,7 @@ const WanTx = wanutil.wanchainTx
 const ethTx = require('ethereumjs-tx');
 const assert = require('assert')
 const args = require("optimist").argv;
-//const sendEmail = require('./send-email').sendEmail;
+const sendEmail = require('./send-email').sendEmail;
 
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
