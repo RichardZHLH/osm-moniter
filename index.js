@@ -6,6 +6,12 @@ const ethTx = require('ethereumjs-tx');
 const assert = require('assert')
 const args = require("optimist").argv;
 const sendEmail = require('./send-email').sendEmail;
+const tableify = require("tableify")
+const iWanClient = require('iwan-sdk');
+const SolidityEvent = require("web3_0/lib/web3/event.js");
+
+const smgAbi = require("./abi.StoremanGroupDelegate.json")
+const { parseLog } = require('ethereum-event-logs')
 
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
@@ -15,7 +21,7 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-
+const lastChangeOwnerBlock = 11511782
 
 let wan_atEth = ""
  
@@ -26,14 +32,20 @@ let gpkAddr= '0xFC86Ad558163C4933eBCfA217945aF6e9a3bcE06';
 let listGroupAddr = '0x8113a9373BD319A05b607747f396CA8e78e8F5B9';
 let PosLibAddr = "0xe5D05F0C52DAe635B8bd2e5AFAF5c72369920B39"
 let metricAddr = '0xd5e61e4069c013a444e962dbd489d845b9Ae2727';
-let tokenManagerAddr = ""
-let quotaAddr = ""
-let crossScAddr = ""
+let ConfigAddr = "0x2C0134788652A8C5fC6EC5c6a9B157E8481F5118"
+let oracleAddr = "0xa2b6CFAE041371A30bED5f2092393f03D6dCDEEc"
+let SignatureVerifierAddr = "0x58C0116caC5e6448A8E04De50f75CB8Ea9664055"
+let tokenManagerAddr = "0x9Fdf94Dff979dbECc2C1a16904bDFb41D305053A"
+let quotaAddr = "0xD076B7fe116da6CcBDA8494771AFeADA7E56e4EE"
+let crossScAddr = "0xe85b0D89CbC670733D6a40A9450D8788bE13da47"
 let KnownCap = {}
 let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
+//let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
 let groupId = "0x000000000000000000000000000000000000000000000041726965735f303030"   
 
 if(testnet) {
+        SignatureVerifierAddr = "0x5dcAB781bD5E1e7af64EEC0686f6d618554F6340"
+        ConfigAddr = "0xc59a6E80E387bdeFa89Efb032aA4EE922Ca78036"
         crossScAddr = '0x62dE27e16f6f31d9Aa5B02F4599Fc6E21B339e79'.toLowerCase();
         oracleAddr = '0xF728FB2e26Be1f12496d9F68BDDFe1Eac0eBFD26'.toLowerCase();
         quotaAddr = '0x7585c2ae6a3F3B2998103cB7040F811B550C9930';
@@ -51,11 +63,19 @@ if(testnet) {
                 "0x5e97f046fc50c094a437c6aa15c72a69625d297b": "100000000000000000000",
         }
         groupId = "0x000000000000000000000000000000000000000000746573746e65745f303037"   
-        web3 = new Web3(new Web3.providers.HttpProvider("http://52.35.168.75:36891")) 
+        //web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.2:8545")) 
+        web3 = new Web3(new Web3.providers.WebsocketProvider("wss://apitest.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9",
+                {
+                        clientConfig: {maxReceivedFrameSize: 100000000, maxReceivedMessageSize: 100000000}
+                }
+                )) 
 
 }
 
 let tm,smg,quota,metric,pos,listGroup,wrc20;
+
+
+
 
 async function wanSendTransaction(sf, value, sdata, to, nonce=undefined){
         if(nonce == undefined){
@@ -193,6 +213,52 @@ async function calQuitPartfromBase(gid, blockId){
                 quitedValue = quitedValue.add(web3.utils.toBN(de.deposit))
         }
         return quitedValue;
+}
+
+
+
+async function monitorChangeOwner(){
+        let ret = []
+        let func2 = web3.utils.sha3("AddAdmin(address)")
+        let func = web3.utils.sha3("OwnershipTransferred(address,address)")
+        let func3 = web3.utils.sha3("Upgraded(address)") 
+        let func4 = web3.utils.sha3("removeAdmin(address)")
+        //console.log("func:", func, func2, func3)
+        let options = {
+                fromBlock: 11525590,
+                address:[smgAdminAddr,gpkAddr,listGroupAddr,PosLibAddr,metricAddr,ConfigAddr,oracleAddr,SignatureVerifierAddr,tokenManagerAddr,quotaAddr,crossScAddr],
+                topics:[[func,func2,func3,func4]],
+        }
+        let events = await web3.eth.getPastLogs(options)
+        for(let i=0; i<events.length; i++){
+                //console.log("event:", events[i])
+                let obj = {}
+                assert.equal(events[i].blockNumber<lastChangeOwnerBlock,true,"owner,admin,Upgraded changed")
+                obj["scAddr"] = events[i].address
+                switch(events[i].topics[0]){
+                        case func:
+                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address)
+                                obj["event"] = "OwnershipTransferred"
+                                obj["target"] = events[i].topics[2]
+                                break
+                        case func2:
+                                obj["event"] = "AddAdmin"
+                                obj["target"] = events[i].data
+                                console.log("AddAdmin  ", events[i].data, "address:",events[i].address)
+                                break
+                        case func3:
+                                obj["event"] = "Upgraded"
+                                obj["target"] = events[i].topics[1]
+                                console.log("Upgraded to ", events[i].topics[1], "address:",events[i].address)
+                        case func4:
+                                obj["event"] = "removeAdmin"
+                                obj["target"] = events[i].data
+                                console.log("removeAdmin  ", events[i].data, "address:",events[i].address)
+                                break                                
+                }
+                ret.push(obj)
+        }
+        return ret
 }
 async function verifyDeposit(gid,blockId){
         let globalConf = await smg.methods.getStoremanConf().call(block_identifier=blockId);
@@ -415,37 +481,56 @@ async function getAvgRewardRatio(){
 
 async function check(){
         await init();
-        //await checkTm();
-        //await checkCross();
-        await checkSmgBalance();
+
+        let htmlString=""
+        let OK = true;
+        let ret = await monitorChangeOwner()
+        if(ret.length != 0){
+                console.log("monitorChangeOwner:", tableify(ret))
+                OK = false 
+                htmlString += tableify(ret)
+        }
+        
+        try{
+                await checkSmgBalance();
+                htmlString += "<p> contract balance is correct </p>"
+        }catch(err){
+                htmlString += "<p> contract balance is wrong </p>"
+                OK = false
+                console.log("checkSmgBalance failed:", err)
+        }
+        
         let groupIds = await getActiveGroupIDs();
         for(let i=0; i<groupIds.length; i++){
                 let grId = groupIds[i]
                 console.log("group:", grId)
-                await verifyDepositCurrent(grId)
-                await checkSmgIncentive(grId);
+                try {
+                        await verifyDepositCurrent(grId)
+                        htmlString = htmlString + "<p> group" + grId +  " deposit is correct </p>"
+                }catch(err){
+                        OK = false
+                        htmlString = htmlString + "<p> group" + grId +  " deposit is wrong </p>"
+                }
+
+                try {
+                        await checkSmgIncentive(grId);
+                        htmlString = htmlString + "<p> group" + grId +  " incentive is correct </p>"
+                }catch(err){
+                        OK = false
+                        htmlString = htmlString + "<p> group" + grId +  " incentive is wrong </p>"
+                }
+        }
+        if(OK){
+                console.log("html OK:", htmlString)
+                sendEmail({subject: "openstoreman check OK",html: htmlString});
+        }else{
+                console.log("html failed:", htmlString)
+                sendEmail({subject: "openstoreman check failed",html: htmlString});
         }
 }
 
 async function main(){
-        let htmlString=""
-        let subject = ""
-        try {
-                await check()
-                htmlString += "check OK"
-                subject += "openstoreman check OK"
-                console.log("openstoreman check OK.")
-        }catch(err){
-                console.log("openstoreman check error:", err)
-                htmlString += err
-                subject += "openstoreman check failed"
-        }
-
-        sendEmail({
-                subject: subject,
-                html: htmlString
-        });
-
+        await check()
 }
 main();
 
@@ -493,70 +578,154 @@ async function getBlockOfbase(groupId) {
         
 }
 
+function logParse(log, abi){
+        let decoders = abi.filter(function (json) {
+                return json.type === 'event';
+            }).map(function(json) {
+                // note first and third params required only by enocde and execute;
+                // so don't call those!
+                return new SolidityEvent(null, json, null);
+            });
+
+        try{
+                return decoders.find(function(decoder) {
+                        return (decoder.signature() == log.topics[0].replace("0x",""));
+                }).decode(log);
+        }catch(err){
+                return undefined
+        }
+
+}
+
+function getOnefromInfo(info, wkAddr, sender, type){
+        assert.equal(wkAddr!=undefined,true)
+        assert.equal(sender!=undefined,true)
+        let sk = info.get(wkAddr)
+        if(!sk){
+                sk = new Map()
+                info.set(wkAddr, sk)
+        }
+        let one = sk.get(sender+type)
+        if(!one){
+                one  = {
+                        "in":web3.utils.toBN(0),
+                        "out":web3.utils.toBN(0), // claim
+                        "incentive":web3.utils.toBN(0), // incentiveClaim
+                        "type":type,
+                }
+                sk.set(sender+type,one)
+        }
+        return one
+}
+
+
 async function checkSmgBalance() {
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr)
         let balanceSc = web3.utils.toBN(0)
+        let toBlock = await web3.eth.getBlockNumber()
         let options = {
                 fromBlock: 9300000,
+                toBlock:toBlock,
                 address:smgAdminAddr,
         }
-        let event = await smg.getPastEvents("allEvents", options)
-        for(let i=0; i<event.length; i++){
-                switch(event[i].event){
+        let info = new Map()
+        let one
+        let events = await smg.getPastEvents("allEvents", options)
+        for(let i=0; i<events.length; i++){
+                let event = events[i]
+                switch(event.event){
                         case "stakeInEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.add(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
                                 break
                         case "stakeAppendEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.add(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
                                 break
                         case "delegateInEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.add(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 2)
+                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
+
                                 break
                         case "partInEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.add(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 3)
+                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
+
                                 break      
                         case "storemanGroupContributeEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.add(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
                                 break                                
                         case "stakeClaimEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.value))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.value))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one.out = one.out.add(web3.utils.toBN(event.returnValues.value))
+
+                                assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateClaimEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 2)
+                                one.out = one.out.add(web3.utils.toBN(event.returnValues.amount))
+
+                                assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "partClaimEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 3)
+                                one.out = one.out.add(web3.utils.toBN(event.returnValues.amount))
+                                assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateIncentiveClaimEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.sender, 2)
+                                one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
+                                assert.ok(one.incentive.lt(one.in))
                                 break                                  
                         case "stakeIncentiveClaimEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
+                                assert.ok(one.incentive.lt(one.in))
                                 break                                  
                         case "stakeIncentiveCrossFeeEvent":
-                                //console.log("event: ", event[i].event)
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event[i].returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
                                 break                                  
                                                                                                                                                         
 
                 }
-                //console.log("event[i]:",event[i])
         }
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
         assert.equal(balanceRealSc, balanceSc.toString(10), "smg balance is wrong")
 
+
+        for(let items of info.entries()){
+                let wkAddr = items[0]
+                let sks = items[1]
+                for(let items2 of sks.entries()) {
+                        let from = items2[0].slice(0,-1)
+                        let node = items2[1]
+                        let n1
+                        if(node.type == 1){
+                                n1 = await smg.methods.getStoremanInfo(wkAddr).call(block_identifier=toBlock);
+                        }else if(node.type == 2){
+                                n1 = await smg.methods.getSmDelegatorInfo(wkAddr, from).call(block_identifier=toBlock);
+                        }else if(node.type == 3){
+                                n1 = await smg.methods.getSmPartnerInfo(wkAddr, from).call(block_identifier=toBlock);
+                        }
+                        assert.equal(n1.deposit, node.in.sub(node.out).toString(10))
+                        assert.ok(one.incentive.lt(one.in))
+                }
+        }
 }
+
+
+
+
 async function  getLastBlockByEpoch(epochId){
         let curBlock = await web3.eth.getBlock('latest')
         let curEpochId = curBlock.epochId;
