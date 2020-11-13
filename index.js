@@ -39,8 +39,8 @@ let tokenManagerAddr = "0x9Fdf94Dff979dbECc2C1a16904bDFb41D305053A"
 let quotaAddr = "0xD076B7fe116da6CcBDA8494771AFeADA7E56e4EE"
 let crossScAddr = "0xe85b0D89CbC670733D6a40A9450D8788bE13da47"
 let KnownCap = {}
-let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
-//let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
+//let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
+let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
 let groupId = "0x000000000000000000000000000000000000000000000041726965735f303030"   
 
 if(testnet) {
