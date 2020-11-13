@@ -41,7 +41,6 @@ let crossScAddr = "0xe85b0D89CbC670733D6a40A9450D8788bE13da47"
 let KnownCap = {}
 //let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
 let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
-let groupId = "0x000000000000000000000000000000000000000000000041726965735f303030"   
 
 if(testnet) {
         SignatureVerifierAddr = "0x5dcAB781bD5E1e7af64EEC0686f6d618554F6340"
@@ -62,7 +61,6 @@ if(testnet) {
                 "0xef1df88ab86ce47bacb01ccb52818e87dde08137": "100000000000000000000",
                 "0x5e97f046fc50c094a437c6aa15c72a69625d297b": "100000000000000000000",
         }
-        groupId = "0x000000000000000000000000000000000000000000746573746e65745f303037"   
         //web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.2:8545")) 
         web3 = new Web3(new Web3.providers.WebsocketProvider("wss://apitest.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9",
                 {
@@ -403,7 +401,7 @@ async function checkSmgIncentive(_groupId) {
                 if(gi.toString(10) != 0){
                         assert.equal( web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).div(web3.utils.toBN(10000)).toString(10), gi, "group Incentive is wrong")
                 }
-                let metricInfo = await metric.methods.getPrdInctMetric(groupId, day, day).call()
+                let metricInfo = await metric.methods.getPrdInctMetric(_groupId, day, day).call()
                 console.log("day metric info:", day, metricInfo)
         }
 
