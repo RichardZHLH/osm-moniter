@@ -21,7 +21,7 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-const lastChangeOwnerBlock = 11511782
+const lastChangeOwnerBlock = 11648551
 
 let wan_atEth = ""
  
@@ -490,8 +490,13 @@ async function check(){
         }
         
         try{
-                await checkSmgBalance();
-                htmlString += "<p> contract balance is correct </p>"
+                let result = await checkSmgBalance();
+                if(result.result){
+                        htmlString += "<p> contract balance is correct </p>"
+                } else {
+                        htmlString += "<p> contract balance is wrong </p>"
+                }
+                htmlString +=  tableify(result.ones)
         }catch(err){
                 htmlString += "<p> contract balance is wrong </p>"
                 OK = false
@@ -520,7 +525,7 @@ async function check(){
         }
         if(OK){
                 console.log("html OK:", htmlString)
-                sendEmail({subject: "openstoreman check OK",html: htmlString});
+                //sendEmail({subject: "openstoreman check OK",html: htmlString});
         }else{
                 console.log("html failed:", htmlString)
                 sendEmail({subject: "openstoreman check failed",html: htmlString});
@@ -634,12 +639,12 @@ async function checkSmgBalance() {
                 switch(event.event){
                         case "stakeInEvent":
                                 balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 1)
                                 one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
                                 break
                         case "stakeAppendEvent":
                                 balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one = getOnefromInfo(info, event.returnValues.wkAddr,event.returnValues.from, 1)
                                 one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
                                 break
                         case "delegateInEvent":
@@ -659,7 +664,7 @@ async function checkSmgBalance() {
                                 break                                
                         case "stakeClaimEvent":
                                 balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 1)
                                 one.out = one.out.add(web3.utils.toBN(event.returnValues.value))
 
                                 assert.ok(one.in.eq(one.out))
@@ -685,7 +690,7 @@ async function checkSmgBalance() {
                                 break                                  
                         case "stakeIncentiveClaimEvent":
                                 balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, "0x00", 1)
+                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.sender, 1)
                                 one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
                                 assert.ok(one.incentive.lt(one.in))
                                 break                                  
@@ -698,9 +703,14 @@ async function checkSmgBalance() {
         }
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
-        assert.equal(balanceRealSc, balanceSc.toString(10), "smg balance is wrong")
 
+        let result = true
 
+        if(balanceRealSc != balanceSc.toString(10)){
+                result = false
+        }
+
+        let ones = []
         for(let items of info.entries()){
                 let wkAddr = items[0]
                 let sks = items[1]
@@ -708,16 +718,38 @@ async function checkSmgBalance() {
                         let from = items2[0].slice(0,-1)
                         let node = items2[1]
                         let n1
+                        let one = {}
                         if(node.type == 1){
                                 n1 = await smg.methods.getStoremanInfo(wkAddr).call(block_identifier=toBlock);
+                                one.type = "candidate"
                         }else if(node.type == 2){
                                 n1 = await smg.methods.getSmDelegatorInfo(wkAddr, from).call(block_identifier=toBlock);
+                                one.type = "delegator"
                         }else if(node.type == 3){
                                 n1 = await smg.methods.getSmPartnerInfo(wkAddr, from).call(block_identifier=toBlock);
+                                one.type = "partner"
                         }
-                        assert.equal(n1.deposit, node.in.sub(node.out).toString(10))
-                        assert.ok(one.incentive.lt(one.in))
+                        one.wkAddr = wkAddr
+                        one.sender = from
+                        one.deposit = node.deposite
+                        one.in = node.in
+                        one.out = node.out
+                        one.incentive = node.incentive
+                        one.isOk = true
+                        if(n1.deposit != node.in.sub(node.out).toString(10)) {
+                                result = false
+                                one.isOk = false
+                        }
+                        if(!one.incentive.lt(one.in)){
+                                result = false
+                                one.isOk = false
+                        }
+                        ones.push(one)
                 }
+        }
+        return {
+                result:result,
+                ones: ones,
         }
 }
 
