@@ -741,7 +741,7 @@ async function checkSmgBalance() {
                                 result = false
                                 one.isOk = false
                         }
-                        if(!node.incentive.lt(node.in)){
+                        if(!node.incentive.mul(web3.utils.toBN(5)).lt(node.in)){
                                 result = false
                                 one.isOk = false
                         }
