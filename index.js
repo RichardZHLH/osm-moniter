@@ -407,14 +407,14 @@ async function checkSmgIncentive(_groupId) {
 
         for(let i=0; i<groupInfo.memberCountDesign; i++){
                 for(let m=groupStartDay; m<groupEndDay && m<today;m++){
-                        console.log("incentive group day:", groupInfo.groupId, m)
+                        console.log("\nincentive group day:", groupInfo.groupId, m)
                         let block = await getLastBlockByEpoch(m);
                         let groupInfoDay = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=block);
                         let smInfo = await smg.methods.getStoremanInfo(selectedNodes[i]).call(block_identifier=block);
                         let ii = await smg.methods.getStoremanIncentive(selectedNodes[i], m).call();
                         let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(15000)).div(web3.utils.toBN(10000))).div(web3.utils.toBN(groupInfoDay.depositWeight))
                         if(ii != 0){
-                                console.log("\nday Incentive:", m, smInfo.wkAddr, ii)
+                                console.log("- day Incentive:", m, smInfo.wkAddr, ii)
                                 let AllexpectIncentiveFromDe = web3.utils.toBN(0)
                                 for(let j=0; j<smInfo.delegatorCount;j++){
                                         let deAddr = await smg.methods.getSmDelegatorAddr(smInfo.wkAddr, j).call(block_identifier=block)
@@ -756,8 +756,11 @@ async function checkSmgBalance() {
 
 
 
-
+let epochBlockMap = new Map()
 async function  getLastBlockByEpoch(epochId){
+        let blockNumber = epochBlockMap.get(epochId)
+        if(blockNumber != undefined) return  blockNumber
+
         let curBlock = await web3.eth.getBlock('latest')
         let curEpochId = curBlock.epochId;
         let curSlostId = curBlock.slotId;
@@ -772,6 +775,7 @@ async function  getLastBlockByEpoch(epochId){
                 for(let i=start+1; i<curBlock.number; i++){
                         let b = await web3.eth.getBlock(i);
                         if(b.epochId >= epochId+1){
+                                epochBlockMap.set(epochId, b.number-1)
                                 return b.number-1
                         }
                 }
