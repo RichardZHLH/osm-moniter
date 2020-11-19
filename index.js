@@ -21,7 +21,7 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-const lastChangeOwnerBlock = 11648551
+const lastChangeOwnerBlock = 	11660204
 
 let wan_atEth = ""
  
@@ -484,7 +484,7 @@ async function check(){
         let OK = true;
         let ret = await monitorChangeOwner()
         if(ret.length != 0){
-                console.log("monitorChangeOwner:", tableify(ret))
+                console.log("monitorChangeOwner:", ret)
                 OK = false 
                 htmlString += tableify(ret)
         }
@@ -745,7 +745,7 @@ async function checkSmgBalance() {
                                 one.isOk = false
                         }
                         ones.push(one)
-                        console.log("one:", one)
+                        //console.log("one:", one)
                 }
         }
         return {
