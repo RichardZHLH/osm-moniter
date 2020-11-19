@@ -9,7 +9,7 @@ const sendEmail = require('./send-email').sendEmail;
 const tableify = require("tableify")
 const iWanClient = require('iwan-sdk');
 const SolidityEvent = require("web3_0/lib/web3/event.js");
-
+const { parse } = require('json2csv');
 const smgAbi = require("./abi.StoremanGroupDelegate.json")
 const { parseLog } = require('ethereum-event-logs')
 
@@ -496,13 +496,13 @@ async function check(){
                 } else {
                         htmlString += "<p> contract balance is wrong </p>"
                 }
-                htmlString +=  tableify(result.ones)
+                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out","incentive","deposit","isOk"]})
+                fs.writeFileSync("./Investors.csv",csv)
         }catch(err){
                 htmlString += "<p> contract balance is wrong </p>"
                 OK = false
                 console.log("checkSmgBalance failed:", err)
         }
-        
         let groupIds = await getActiveGroupIDs();
         for(let i=0; i<groupIds.length; i++){
                 let grId = groupIds[i]
@@ -731,20 +731,21 @@ async function checkSmgBalance() {
                         }
                         one.wkAddr = wkAddr
                         one.sender = from
-                        one.deposit = node.deposite
-                        one.in = node.in
-                        one.out = node.out
-                        one.incentive = node.incentive
+                        one.deposit = n1.deposit
+                        one.in = node.in.toString(10)
+                        one.out = node.out.toString(10)
+                        one.incentive = node.incentive.toString(10)
                         one.isOk = true
                         if(n1.deposit != node.in.sub(node.out).toString(10)) {
                                 result = false
                                 one.isOk = false
                         }
-                        if(!one.incentive.lt(one.in)){
+                        if(!node.incentive.lt(node.in)){
                                 result = false
                                 one.isOk = false
                         }
                         ones.push(one)
+                        console.log("one:", one)
                 }
         }
         return {
