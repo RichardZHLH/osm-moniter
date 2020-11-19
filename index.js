@@ -523,6 +523,7 @@ async function check(){
                         htmlString = htmlString + "<p> group" + grId +  " incentive is wrong </p>"
                 }
         }
+        web3.currentProvider.disconnect();
         if(OK){
                 console.log("html OK:", htmlString)
                 //sendEmail({subject: "openstoreman check OK",html: htmlString});
