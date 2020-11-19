@@ -497,7 +497,7 @@ async function check(){
                         htmlString += "<p> contract balance is wrong </p>"
                 }
                 csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out","incentive","deposit","isOk"]})
-                fs.writeFileSync("./Investors.csv",csv)
+                fs.writeFileSync("/tmp/Investors.csv",csv)
         }catch(err){
                 htmlString += "<p> contract balance is wrong </p>"
                 OK = false
