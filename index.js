@@ -499,7 +499,7 @@ async function check(){
                 csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out","incentive","deposit","isOk"]})
                 fs.writeFileSync("/tmp/Investors.csv",csv)
         }catch(err){
-                htmlString += "<p> contract balance is wrong </p>"
+                htmlString += "<p> checkSmgBalance try-catch error. check the console output for detail. </p>"
                 OK = false
                 console.log("checkSmgBalance failed:", err)
         }
@@ -512,7 +512,8 @@ async function check(){
                         htmlString = htmlString + "<p> group" + grId +  " deposit is correct </p>"
                 }catch(err){
                         OK = false
-                        htmlString = htmlString + "<p> group" + grId +  " deposit is wrong </p>"
+                        htmlString = htmlString + "<p> group" + grId +  " deposit check exception </p>"
+                        console.log("verifyDepositCurrent catch error:", err)
                 }
 
                 try {
@@ -520,7 +521,8 @@ async function check(){
                         htmlString = htmlString + "<p> group" + grId +  " incentive is correct </p>"
                 }catch(err){
                         OK = false
-                        htmlString = htmlString + "<p> group" + grId +  " incentive is wrong </p>"
+                        htmlString = htmlString + "<p> group" + grId +  " incentive check exception.  </p>"
+                        console.log("checkSmgIncentive catch error:", err)
                 }
         }
         web3.currentProvider.disconnect();
