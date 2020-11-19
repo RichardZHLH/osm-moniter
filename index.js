@@ -223,7 +223,7 @@ async function monitorChangeOwner(){
         let func4 = web3.utils.sha3("removeAdmin(address)")
         //console.log("func:", func, func2, func3)
         let options = {
-                fromBlock: 11525590,
+                fromBlock: lastChangeOwnerBlock,
                 address:[smgAdminAddr,gpkAddr,listGroupAddr,PosLibAddr,metricAddr,ConfigAddr,oracleAddr,SignatureVerifierAddr,tokenManagerAddr,quotaAddr,crossScAddr],
                 topics:[[func,func2,func3,func4]],
         }
@@ -231,7 +231,7 @@ async function monitorChangeOwner(){
         for(let i=0; i<events.length; i++){
                 //console.log("event:", events[i])
                 let obj = {}
-                assert.equal(events[i].blockNumber<lastChangeOwnerBlock,true,"owner,admin,Upgraded changed")
+                //assert.equal(events[i].blockNumber<lastChangeOwnerBlock,true,"owner,admin,Upgraded changed")
                 obj["scAddr"] = events[i].address
                 switch(events[i].topics[0]){
                         case func:
