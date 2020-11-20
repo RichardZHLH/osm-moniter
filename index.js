@@ -25,7 +25,10 @@ const lastChangeOwnerBlock = 	11663288
 const lastChangeOwnerBlockETH = 	11287378
 
 let wan_atEth = ""
- 
+
+var logargs =  process.argv.splice(2)
+var job = logargs[0]
+var build_number = logargs[1]
 
 const testnet = args.testnet
 let smgAdminAddr = '0x1E7450D5d17338a348C5438546f0b4D0A5fbeaB6';
@@ -588,14 +591,19 @@ async function check(){
                         console.log("checkSmgIncentive catch error:", err)
                 }
         }
+
         web3.currentProvider.disconnect();
         if(OK){
                 console.log("html OK:", htmlString)
-                //sendEmail({subject: "openstoreman check OK",html: htmlString});
+                //sendEmail({subject: "Pass-Openstoreman check OK",html: htmlString,attachments: [{filename: 'Investors.csv',path: '/tmp/Investors.csv'},{filename: 'log',path: '/var/lib/jenkins/jobs/'+ job + '/builds/' + build_number+'/log'}]});
         }else{
                 console.log("html failed:", htmlString)
-                sendEmail({subject: "openstoreman check failed",html: htmlString});
+                sendEmail({subject: "Faild -Openstoreman check failed",
+                        html: htmlString,
+                        attachments: [{filename: 'Investors.csv',path: '/tmp/Investors.csv'},{filename: 'log',path: '/var/lib/jenkins/jobs/'+ job + '/builds/' + build_number+'/log'}]}
+                        );
         }
+
 }
 
 async function main(){
