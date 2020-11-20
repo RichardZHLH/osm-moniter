@@ -21,7 +21,8 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-const lastChangeOwnerBlock = 	11660204
+const lastChangeOwnerBlock = 	11663288
+const lastChangeOwnerBlockETH = 	11287378
 
 let wan_atEth = ""
  
@@ -38,10 +39,18 @@ let SignatureVerifierAddr = "0x58C0116caC5e6448A8E04De50f75CB8Ea9664055"
 let tokenManagerAddr = "0x9Fdf94Dff979dbECc2C1a16904bDFb41D305053A"
 let quotaAddr = "0xD076B7fe116da6CcBDA8494771AFeADA7E56e4EE"
 let crossScAddr = "0xe85b0D89CbC670733D6a40A9450D8788bE13da47"
+
+let SignatureVerifierEth = '0x9276ee38A5250e2F7FbE00A12EC17d09b5d28F3d'
+let Bn128SchnorrVerifierEth = '0x84271540F80e8879826C377eBC496DFaE270321a'
+let Secp256k1SchnorrVerifierEth = '0xC654a945E8Ed388C0477F81f1be531946fcC6FF0'
+let TokenManagerProxyEth = '0xbaB93311dE250B5B422c705129b3617b3cB6E9e1'
+let CrossProxyEth = '0xfCeAAaEB8D564a9D0e71Ef36f027b9D162bC334e'
+let QuotaProxyEth = '0x169eA2E2C8783a9Da305F563C65793525e831F62'
+let OracleProxyEth = '0xBb38d10033b26F3836A8c1E41788206868b9F228'
 let KnownCap = {}
 //let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
 let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
-
+let web3Eth = new Web3(new Web3.providers.HttpProvider("http://54.213.225.113:26892")) 
 if(testnet) {
         SignatureVerifierAddr = "0x5dcAB781bD5E1e7af64EEC0686f6d618554F6340"
         ConfigAddr = "0xc59a6E80E387bdeFa89Efb032aA4EE922Ca78036"
@@ -258,6 +267,54 @@ async function monitorChangeOwner(){
         }
         return ret
 }
+
+
+async function monitorChangeOwnerEth(){
+        let ret = []
+        let func2 = web3.utils.sha3("AddAdmin(address)")
+        let func = web3.utils.sha3("OwnershipTransferred(address,address)")
+        let func3 = web3.utils.sha3("Upgraded(address)") 
+        let func4 = web3.utils.sha3("removeAdmin(address)")
+        //console.log("func:", func, func2, func3)
+        let options = {
+                fromBlock: lastChangeOwnerBlockETH,
+                address:[SignatureVerifierEth,Bn128SchnorrVerifierEth,Secp256k1SchnorrVerifierEth,TokenManagerProxyEth,CrossProxyEth,QuotaProxyEth,OracleProxyEth],
+                topics:[[func,func2,func3,func4]],
+        }
+
+        let events = await web3Eth.eth.getPastLogs(options)
+        for(let i=0; i<events.length; i++){
+                console.log("event:", events[i])
+                let obj = {}
+                //assert.equal(events[i].blockNumber<lastChangeOwnerBlock,true,"owner,admin,Upgraded changed")
+                obj["scAddr"] = events[i].address
+                switch(events[i].topics[0]){
+                        case func:
+                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address)
+                                obj["event"] = "OwnershipTransferred"
+                                obj["target"] = events[i].topics[2]
+                                break
+                        case func2:
+                                obj["event"] = "AddAdmin"
+                                obj["target"] = events[i].data
+                                console.log("AddAdmin  ", events[i].data, "address:",events[i].address)
+                                break
+                        case func3:
+                                obj["event"] = "Upgraded"
+                                obj["target"] = events[i].topics[1]
+                                console.log("Upgraded to ", events[i].topics[1], "address:",events[i].address)
+                        case func4:
+                                obj["event"] = "removeAdmin"
+                                obj["target"] = events[i].data
+                                console.log("removeAdmin  ", events[i].data, "address:",events[i].address)
+                                break                                
+                }
+                ret.push(obj)
+        }
+        return ret
+}
+
+
 async function verifyDeposit(gid,blockId){
         let globalConf = await smg.methods.getStoremanConf().call(block_identifier=blockId);
         let weight = globalConf.standaloneWeight;
@@ -488,7 +545,13 @@ async function check(){
                 OK = false 
                 htmlString += tableify(ret)
         }
-        
+        ret = await monitorChangeOwnerEth()
+        if(ret.length != 0){
+                console.log("monitorChangeOwnerEth:", ret)
+                OK = false 
+                htmlString += tableify(ret)
+        }
+
         try{
                 let result = await checkSmgBalance();
                 if(result.result){
