@@ -53,7 +53,9 @@ let OracleProxyEth = '0xBb38d10033b26F3836A8c1E41788206868b9F228'
 let KnownCap = {}
 //let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
 let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9")) 
-let web3Eth = new Web3(new Web3.providers.HttpProvider("http://54.213.225.113:26892")) 
+//let web3Eth = new Web3(new Web3.providers.HttpProvider("http://54.213.225.113:26892")) 
+let web3Eth = new Web3(new Web3.providers.HttpProvider("https://mainnet.infura.io/v3/eed9f47eee3d4104a990f9e45ea2c545")) 
+
 if(testnet) {
         SignatureVerifierAddr = "0x5dcAB781bD5E1e7af64EEC0686f6d618554F6340"
         ConfigAddr = "0xc59a6E80E387bdeFa89Efb032aA4EE922Ca78036"
