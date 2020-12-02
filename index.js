@@ -78,7 +78,7 @@ if(testnet) {
         //web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.2:8545")) 
         web3 = new Web3(new Web3.providers.WebsocketProvider("wss://apitest.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9",
                 {
-                        clientConfig: {maxReceivedFrameSize: 100000000, maxReceivedMessageSize: 100000000}
+                        clientConfig: {maxReceivedFrameSize: 1000000000, maxReceivedMessageSize: 1000000000}
                 }
                 )) 
 
