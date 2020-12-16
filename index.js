@@ -690,16 +690,26 @@ function getOnefromInfo(info, wkAddr, sender, type){
         if(!one){
                 one  = {
                         "in":web3.utils.toBN(0),
+                        "partin":web3.utils.toBN(0),
                         "out":web3.utils.toBN(0), // claim
                         "incentive":web3.utils.toBN(0), // incentiveClaim
                         "type":type,
                 }
                 sk.set(sender+type,one)
+                if(type == 1){
+                        wkaddr2OwnerMap.set(wkAddr, sender)
+                }
         }
         return one
 }
 
-
+let wkaddr2OwnerMap = new Map()
+async function addPartInToOwner(info, wkaddr, value){
+        let from = wkaddr2OwnerMap.get(wkaddr)
+        let one = getOnefromInfo(info, wkaddr, from,  1)
+        one.partin = one.partin.add(value)
+        //console.log("addPartInToOwner:", one)
+}
 async function checkSmgBalance() {
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr)
         let balanceSc = web3.utils.toBN(0)
@@ -735,7 +745,7 @@ async function checkSmgBalance() {
                                 balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
                                 one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 3)
                                 one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
-
+                                addPartInToOwner(info, event.returnValues.wkAddr, web3.utils.toBN(event.returnValues.value))
                                 break      
                         case "storemanGroupContributeEvent":
                                 balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
@@ -770,7 +780,12 @@ async function checkSmgBalance() {
                                 balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
                                 one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.sender, 1)
                                 one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
-                                assert.ok(one.incentive.lt(one.in))
+
+                                if(!one.incentive.lt(one.in.add(one.partin))){
+                                        console.log("one:", event.returnValues.wkAddr, event.returnValues.sender, one)
+                                }
+                                        
+                                assert.ok(one.incentive.lt(one.in.add(one.partin)))
                                 break                                  
                         case "stakeIncentiveCrossFeeEvent":
                                 balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
