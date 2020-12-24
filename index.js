@@ -571,6 +571,7 @@ async function check(){
                 fs.writeFileSync("/tmp/Investors.csv",csv)
         }catch(err){
                 htmlString += "<p> checkSmgBalance try-catch error. check the console output for detail. </p>"
+                htmlString += err
                 OK = false
                 console.log("checkSmgBalance failed:", err)
                 if(-1 != err.toString().index("CONNECTION ERROR")){
@@ -588,6 +589,7 @@ async function check(){
                 }catch(err){
                         OK = false
                         htmlString = htmlString + "<p> group" + grId +  " deposit check exception </p>"
+                        htmlString += err
                         console.log("verifyDepositCurrent catch error:", err)
                         if(-1 != err.toString().index("CONNECTION ERROR")){
                                 console.log("CONNECTION ERROR, ignore this check")
@@ -601,6 +603,7 @@ async function check(){
                 }catch(err){
                         OK = false
                         htmlString = htmlString + "<p> group" + grId +  " incentive check exception.  </p>"
+                        htmlString += err
                         console.log("checkSmgIncentive catch error:", err)
                         if(-1 != err.toString().index("CONNECTION ERROR")){
                                 console.log("CONNECTION ERROR, ignore this check")
