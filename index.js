@@ -564,14 +564,19 @@ async function check(){
                 if(result.result){
                         htmlString += "<p> contract balance is correct </p>"
                 } else {
+                        OK = false
                         htmlString += "<p> contract balance is wrong </p>"
                 }
-                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out","incentive","deposit","isOk"]})
+                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","partin","out","incentive","deposit","isOk"]})
                 fs.writeFileSync("/tmp/Investors.csv",csv)
         }catch(err){
                 htmlString += "<p> checkSmgBalance try-catch error. check the console output for detail. </p>"
                 OK = false
                 console.log("checkSmgBalance failed:", err)
+                if(-1 != err.toString().index("CONNECTION ERROR")){
+                        console.log("CONNECTION ERROR, ignore this check")
+                        process.exit(0);
+                }
         }
         let groupIds = await getActiveGroupIDs();
         for(let i=0; i<groupIds.length; i++){
@@ -584,6 +589,10 @@ async function check(){
                         OK = false
                         htmlString = htmlString + "<p> group" + grId +  " deposit check exception </p>"
                         console.log("verifyDepositCurrent catch error:", err)
+                        if(-1 != err.toString().index("CONNECTION ERROR")){
+                                console.log("CONNECTION ERROR, ignore this check")
+                                process.exit(0);
+                        }
                 }
 
                 try {
@@ -593,6 +602,10 @@ async function check(){
                         OK = false
                         htmlString = htmlString + "<p> group" + grId +  " incentive check exception.  </p>"
                         console.log("checkSmgIncentive catch error:", err)
+                        if(-1 != err.toString().index("CONNECTION ERROR")){
+                                console.log("CONNECTION ERROR, ignore this check")
+                                process.exit(0);
+                        }
                 }
         }
 
@@ -833,7 +846,7 @@ async function checkSmgBalance() {
                                 result = false
                                 one.isOk = false
                         }
-                        if(!node.incentive.mul(web3.utils.toBN(5)).lt(node.in)){
+                        if(!node.incentive.mul(web3.utils.toBN(5)).lt(node.in.add(node.partin))){
                                 result = false
                                 one.isOk = false
                         }
