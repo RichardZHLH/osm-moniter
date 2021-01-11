@@ -574,7 +574,7 @@ async function check(){
                 htmlString += err
                 OK = false
                 console.log("checkSmgBalance failed:", err)
-                if(-1 != err.toString().index("CONNECTION ERROR")){
+                if(-1 != err.toString().indexOf("CONNECTION ERROR")){
                         console.log("CONNECTION ERROR, ignore this check")
                         process.exit(0);
                 }
@@ -591,7 +591,7 @@ async function check(){
                         htmlString = htmlString + "<p> group" + grId +  " deposit check exception </p>"
                         htmlString += err
                         console.log("verifyDepositCurrent catch error:", err)
-                        if(-1 != err.toString().index("CONNECTION ERROR")){
+                        if(-1 != err.toString().indexOf("CONNECTION ERROR")){
                                 console.log("CONNECTION ERROR, ignore this check")
                                 process.exit(0);
                         }
@@ -605,7 +605,7 @@ async function check(){
                         htmlString = htmlString + "<p> group" + grId +  " incentive check exception.  </p>"
                         htmlString += err
                         console.log("checkSmgIncentive catch error:", err)
-                        if(-1 != err.toString().index("CONNECTION ERROR")){
+                        if(-1 != err.toString().indexOf("CONNECTION ERROR")){
                                 console.log("CONNECTION ERROR, ignore this check")
                                 process.exit(0);
                         }
@@ -737,6 +737,16 @@ async function checkSmgBalance() {
         }
         let info = new Map()
         let one
+        let crossMintEvents = await cross.getPastEvents("UserFastMintLogger", options)
+        let crossBurnEvents = await cross.getPastEvents("UserFastBurnLogger", options)
+        let crossFee =  web3.utils.toBN(0)
+        for(let i=0; i<crossMintEvents.length; i++){
+                crossFee = crossFee.add(web3.utils.toBN(crossMintEvents[i].returnValues.fee))
+        }
+        for(let i=0; i<crossBurnEvents.length; i++){
+                crossFee = crossFee.add(web3.utils.toBN(crossBurnEvents[i].returnValues.fee))
+        }
+        console.log("crossFee total:", crossFee.toString(10))
         let events = await smg.getPastEvents("allEvents", options)
         for(let i=0; i<events.length; i++){
                 let event = events[i]
@@ -810,6 +820,7 @@ async function checkSmgBalance() {
 
                 }
         }
+        balanceSc = balanceSc.add(crossFee)
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
 
