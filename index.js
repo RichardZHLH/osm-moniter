@@ -422,7 +422,13 @@ function basicEqual(A, B,s){
         if(A.divRound(web3.utils.toBN(10000)).toString(10) != B.divRound(web3.utils.toBN(10000)).toString(10)){
                 console.log("-----------------------:",A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10))
         }
-        assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
+        if(A.divRound(web3.utils.toBN(10000)).toString(10) == B.divRound(web3.utils.toBN(10000)).toString(10)
+        || A.add(web3.utils.toBN(9999)).divRound(web3.utils.toBN(10000)).toString(10) == B.add(web3.utils.toBN(9999)).divRound(web3.utils.toBN(10000)).toString(10)
+        ) {
+                return
+        }
+        assert(false, true, s)
+        //assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
 }
 function rate(A, B) {
         return web3.utils.toBN(10000000).mul(A).divRound(B).mul(web3.utils.toBN(365)).toString(10)
@@ -451,19 +457,19 @@ async function checkSmgIncentive(_groupId) {
                 let groupNumber = await getLastBlockByEpoch(day)
                 groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=groupNumber)
 
-                let p1Return = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posAvg[0])).divRound(web3.utils.toBN(3650000))
+                let p1Return = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posAvg[0])).divRound(web3.utils.toBN(10000)).divRound(web3.utils.toBN(365))
                 let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0]).mul(web3.utils.toBN(10).pow(web3.utils.toBN(18)))).divRound(web3.utils.toBN(totalDepositCache)).divRound(web3.utils.toBN(10000))
                 //let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0])).divRound(web3.utils.toBN(totalDepositCache))
                 let posRet = await pos.methods.getMinIncentive(groupInfo.deposit, day, totalDepositCache).call();
                 console.log("getMinIncentive:", web3.utils.fromWei(posRet))
                 if(p1Return.lt(capReturn)){
-                        assert.equal( web3.utils.toBN(posRet).toString(10), p1Return.toString(10), "group Incentive is wrong")
+                        basicEqual( web3.utils.toBN(posRet), p1Return, "group Incentive is wrong")
                 } else {
-                        assert.equal( web3.utils.toBN(posRet).toString(10), capReturn.toString(10), "group Incentive is wrong")
+                        basicEqual( web3.utils.toBN(posRet), capReturn, "group Incentive is wrong")
                 }
                 let co = await smg.methods.getChainTypeCo(groupInfo.chain1, groupInfo.chain2).call(block_identifier=groupNumber)
                 if(gi.toString(10) != 0){
-                        assert.equal( web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).divRound(web3.utils.toBN(10000)).toString(10), gi, "group Incentive is wrong")
+                        basicEqual(web3.utils.toBN(gi), web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).divRound(web3.utils.toBN(10000)),  "group Incentive is wrong")
                 }
                 let metricInfo = await metric.methods.getPrdInctMetric(_groupId, day, day).call()
                 console.log("day metric info:", day, metricInfo)
