@@ -340,8 +340,8 @@ async function verifyDeposit(gid,blockId){
                 totalDeposit = totalDeposit.add(web3.utils.toBN(sk.deposit))
                 totalDeposit = totalDeposit.add(web3.utils.toBN(sk.delegateDeposit))
                 totalDeposit = totalDeposit.add(web3.utils.toBN(sk.partnerDeposit))
-                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.deposit).mul(web3.utils.toBN(weight)).div(web3.utils.toBN(10000)))
-                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.partnerDeposit).mul(web3.utils.toBN(weight)).div(web3.utils.toBN(10000)))
+                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.deposit).mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000)))
+                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.partnerDeposit).mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000)))
                 totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.delegateDeposit))
                 for(let k=0; k<parseInt(sk.delegatorCount); k++){
                         let deAddr = await smg.methods.getSmDelegatorAddr(sk.wkAddr, k).call(block_identifier=blockId);
@@ -378,9 +378,9 @@ async function verifyDeposit(gid,blockId){
         console.log("groupdeposit:", groupInfo.deposit)
         console.log("totalDeposit:", totalDeposit.add(quitedDelegate).add(quitedPart).toString(10),  blockId, gid)
         assert.equal(groupInfo.deposit, totalDeposit.add(quitedDelegate).add(quitedPart).toString(10), "totalDeposit is wrong")
-        console.log("total DepositWeight: ", totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).div(web3.utils.toBN(10000))).toString(10), blockId)
+        console.log("total DepositWeight: ", totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000))).toString(10), blockId)
         console.log("group DepositWeight: ", groupInfo.depositWeight, blockId)
-        assert.equal(groupInfo.depositWeight, totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).div(web3.utils.toBN(10000))).toString(10), "totalDepositWeight is wrong")
+        assert.equal(groupInfo.depositWeight, totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000))).toString(10), "totalDepositWeight is wrong")
 
 }
 
@@ -425,7 +425,7 @@ function basicEqual(A, B,s){
         assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
 }
 function rate(A, B) {
-        return web3.utils.toBN(10000000).mul(A).div(B).mul(web3.utils.toBN(365)).toString(10)
+        return web3.utils.toBN(10000000).mul(A).divRound(B).mul(web3.utils.toBN(365)).toString(10)
 }
 async function checkSmgIncentive(_groupId) {
         let groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call()
@@ -451,9 +451,9 @@ async function checkSmgIncentive(_groupId) {
                 let groupNumber = await getLastBlockByEpoch(day)
                 groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=groupNumber)
 
-                let p1Return = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posAvg[0])).div(web3.utils.toBN(3650000))
-                let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0]).mul(web3.utils.toBN(10).pow(web3.utils.toBN(18)))).div(web3.utils.toBN(totalDepositCache)).div(web3.utils.toBN(10000))
-                //let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0])).div(web3.utils.toBN(totalDepositCache))
+                let p1Return = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posAvg[0])).divRound(web3.utils.toBN(3650000))
+                let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0]).mul(web3.utils.toBN(10).pow(web3.utils.toBN(18)))).divRound(web3.utils.toBN(totalDepositCache)).divRound(web3.utils.toBN(10000))
+                //let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0])).divRound(web3.utils.toBN(totalDepositCache))
                 let posRet = await pos.methods.getMinIncentive(groupInfo.deposit, day, totalDepositCache).call();
                 console.log("getMinIncentive:", web3.utils.fromWei(posRet))
                 if(p1Return.lt(capReturn)){
@@ -463,7 +463,7 @@ async function checkSmgIncentive(_groupId) {
                 }
                 let co = await smg.methods.getChainTypeCo(groupInfo.chain1, groupInfo.chain2).call(block_identifier=groupNumber)
                 if(gi.toString(10) != 0){
-                        assert.equal( web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).div(web3.utils.toBN(10000)).toString(10), gi, "group Incentive is wrong")
+                        assert.equal( web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).divRound(web3.utils.toBN(10000)).toString(10), gi, "group Incentive is wrong")
                 }
                 let metricInfo = await metric.methods.getPrdInctMetric(_groupId, day, day).call()
                 console.log("day metric info:", day, metricInfo)
@@ -476,7 +476,7 @@ async function checkSmgIncentive(_groupId) {
                         let groupInfoDay = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=block);
                         let smInfo = await smg.methods.getStoremanInfo(selectedNodes[i]).call(block_identifier=block);
                         let ii = await smg.methods.getStoremanIncentive(selectedNodes[i], m).call();
-                        let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(15000)).div(web3.utils.toBN(10000))).div(web3.utils.toBN(groupInfoDay.depositWeight))
+                        let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(15000)).divRound(web3.utils.toBN(10000))).divRound(web3.utils.toBN(groupInfoDay.depositWeight))
                         if(ii != 0){
                                 console.log("- day Incentive:", m, smInfo.wkAddr, ii)
                                 let AllexpectIncentiveFromDe = web3.utils.toBN(0)
@@ -491,8 +491,8 @@ async function checkSmgIncentive(_groupId) {
                                                 }
                                         }
                                         let deIncentive = await smg.methods.getSmDelegatorInfoIncentive(smInfo.wkAddr, deAddr, m).call()
-                                        let expectIncentiveDe = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).div(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(90)).div(web3.utils.toBN(100))
-                                        AllexpectIncentiveFromDe = AllexpectIncentiveFromDe.add(web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).div(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(10)).div(web3.utils.toBN(100)))
+                                        let expectIncentiveDe = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(90)).divRound(web3.utils.toBN(100))
+                                        AllexpectIncentiveFromDe = AllexpectIncentiveFromDe.add(web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(10)).divRound(web3.utils.toBN(100)))
                                         console.log("-- delegate incentive:", deAddr,rate(web3.utils.toBN(deIncentive), web3.utils.toBN(deInfo.deposit)), deInfo.deposit,deIncentive, expectIncentiveDe.toString(10))
                                         basicEqual(expectIncentiveDe,web3.utils.toBN(deIncentive), "delegate incentive wrong")
                                 }
@@ -508,7 +508,7 @@ async function checkSmgIncentive(_groupId) {
                                                         continue
                                                 }
                                         }
-                                        let expectIncentivePn = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).div(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(15000)).div(web3.utils.toBN(10000))
+                                        let expectIncentivePn = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(15000)).divRound(web3.utils.toBN(10000))
                                         AllexpectIncentiveFromPartner = AllexpectIncentiveFromPartner.add(expectIncentivePn)
                                 }
                                 console.log("-- sk incentive:", rate(web3.utils.toBN(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe)), ii, expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner).toString(10))
@@ -536,9 +536,9 @@ async function getAvgRewardRatio(){
         }
         console.log("dattotalIncentive, totalDeposit:",  web3.utils.fromWei(totalIncentive).toString(10), web3.utils.fromWei(totalDeposit));
         let base = web3.utils.toBN(10000)
-        console.log("rate %s%%%%",  base.mul(web3.utils.toBN(365)).mul(totalIncentive).div(web3.utils.toBN(totalDeposit)).toString(10))
+        console.log("rate %s%%%%",  base.mul(web3.utils.toBN(365)).mul(totalIncentive).divRound(web3.utils.toBN(totalDeposit)).toString(10))
         let posCap = await pos.methods.getHardCap(epochID*3600*24).call()
-        console.log("pos hard:", web3.utils.toBN(posCap[0]).div(web3.utils.toBN(10000)).toString(10))
+        console.log("pos hard:", web3.utils.toBN(posCap[0]).divRound(web3.utils.toBN(10000)).toString(10))
 }
 
 async function check(){
