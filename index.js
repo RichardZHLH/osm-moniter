@@ -21,8 +21,8 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 
-const lastChangeOwnerBlock = 	11663288
-const lastChangeOwnerBlockETH = 	11287378
+const lastChangeOwnerBlock = 	13347770
+const lastChangeOwnerBlockETH = 	11931669
 
 let wan_atEth = ""
 
