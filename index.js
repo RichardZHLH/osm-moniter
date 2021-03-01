@@ -23,7 +23,7 @@ let scAddr;
 
 const lastChangeOwnerBlock = 	13347770
 const lastChangeOwnerBlockETH = 	11931669
-
+const oldCrossEventFee = "9960"
 let wan_atEth = ""
 
 var logargs =  process.argv.splice(2)
@@ -51,8 +51,8 @@ let CrossProxyEth = '0xfCeAAaEB8D564a9D0e71Ef36f027b9D162bC334e'
 let QuotaProxyEth = '0x169eA2E2C8783a9Da305F563C65793525e831F62'
 let OracleProxyEth = '0xBb38d10033b26F3836A8c1E41788206868b9F228'
 let KnownCap = {}
-//let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
-let web3 = new Web3(new Web3.providers.HttpProvider("http://44.236.235.123:26891"))
+let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
+//let web3 = new Web3(new Web3.providers.HttpProvider("http://44.236.235.123:26891"))
 
 // let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9", {
 //         clientConfig: {maxReceivedFrameSize: 1000000000, maxReceivedMessageSize: 1000000000}
@@ -735,9 +735,10 @@ async function addPartInToOwner(info, wkaddr, value){
         //console.log("addPartInToOwner:", one)
 }
 async function checkSmgBalance() {
-        let balanceRealSc = await web3.eth.getBalance(smgAdminAddr)
-        let balanceSc = web3.utils.toBN(0)
         let toBlock = await web3.eth.getBlockNumber()
+        console.log("toBlock:",toBlock)
+        let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
+        let balanceSc = web3.utils.toBN(0)
         let options = {
                 fromBlock: 9300000,
                 toBlock:toBlock,
@@ -745,14 +746,14 @@ async function checkSmgBalance() {
         }
         let info = new Map()
         let one
-        let crossMintEvents = await cross.getPastEvents("UserFastMintLogger", options)
-        let crossBurnEvents = await cross.getPastEvents("UserFastBurnLogger", options)
-        let crossFee =  web3.utils.toBN(0)
+        let crossMintEvents = await cross.getPastEvents("UserLockLogger", options)
+        let crossBurnEvents = await cross.getPastEvents("UserBurnLogger", options)
+        let crossFee =  web3.utils.toBN(web3.utils.toWei(oldCrossEventFee))
         for(let i=0; i<crossMintEvents.length; i++){
-                crossFee = crossFee.add(web3.utils.toBN(crossMintEvents[i].returnValues.fee))
+                crossFee = crossFee.add(web3.utils.toBN(crossMintEvents[i].returnValues.serviceFee))
         }
         for(let i=0; i<crossBurnEvents.length; i++){
-                crossFee = crossFee.add(web3.utils.toBN(crossBurnEvents[i].returnValues.fee))
+                crossFee = crossFee.add(web3.utils.toBN(crossBurnEvents[i].returnValues.serviceFee))
         }
         console.log("crossFee total:", crossFee.toString(10))
         let events = await smg.getPastEvents("allEvents", options)
@@ -831,11 +832,11 @@ async function checkSmgBalance() {
         balanceSc = balanceSc.add(crossFee)
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
-
         let result = true
 
         if(balanceRealSc != balanceSc.toString(10)){
                 result = false
+                console.log("error: real balance != calculated balance")
         }
 
         let ones = []
