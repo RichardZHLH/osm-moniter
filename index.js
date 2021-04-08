@@ -451,8 +451,17 @@ async function checkSmgIncentive(_groupId) {
                 groupIncentives[day] = gi
                 let posCap = await pos.methods.getHardCap( day*3600*24).call();
                 console.log("pos posCap:", posCap[0])
-                let posAvg = await pos.methods.getPosAvgReturn(  day*3600*24).call();
-                console.log("pos posAvg rate: %d/10000",  posAvg[0])
+                let posAvg
+                while(true){
+                        try {
+                                posAvg = await pos.methods.getPosAvgReturn(  day*3600*24).call();
+                                console.log("pos posAvg rate: %d/10000",  posAvg[0])
+                                break
+                        }catch(err){
+                                console.log("pos getPosAvgReturn exception, retry")
+                        }
+                }
+
                 let totalDepositCache = await listGroup.methods.getTotalDeposit(day).call();
                 console.log("totaldepodit day:", day, totalDepositCache)
 
