@@ -329,7 +329,7 @@ async function verifyDeposit(gid,blockId){
         let weight = globalConf.standaloneWeight;
         let groupInfo = await smg.methods.getStoremanGroupInfo(gid).call(block_identifier=blockId);
         //console.log("groupInfo:", groupInfo)
-        assert.equal(21, groupInfo.memberCountDesign,'count is wrong')
+        assert.equal(25, groupInfo.memberCountDesign,'count is wrong')
         let totalDeposit = web3.utils.toBN(0)
         let totalDepositWeight = web3.utils.toBN(0)
         let selected = await smg.methods.getSelectedStoreman(gid).call(block_identifier=blockId);
