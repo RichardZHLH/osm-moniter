@@ -429,6 +429,17 @@ function basicEqual(A, B,s){
         ) {
                 return
         }
+        let C
+        if(A.lt(B)) {
+          C = B.sub(A)
+        } else {
+          C = A.sub(B)
+        }
+      
+        if(C.lt(web3.utils.toBN("10000"))) {
+          return
+        }
+        console.log("C:", C)
         assert(false, true, s)
         //assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
 }
