@@ -20,7 +20,6 @@ const sf ={
 const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
-let standaloneWeight = 10000  // 
 const lastChangeOwnerBlock = 	13347770
 const lastChangeOwnerBlockETH = 	11931669
 const oldCrossEventFee = "9960"
@@ -182,8 +181,6 @@ async function init() {
         cross = new  web3.eth.Contract(crossAbi, crossScAddr);
         token = new  web3.eth.Contract(tokenAbi, wan_atEth);
         listGroup = new  web3.eth.Contract(listGroupAbi, listGroupAddr);
-        let osmConf = await smg.methods.getStoremanConf().call()
-        standaloneWeight = osmConf.standaloneWeight
 }
 
 async function verifyDepositBase(gid){
@@ -504,8 +501,9 @@ async function checkSmgIncentive(_groupId) {
                         let block = await getLastBlockByEpoch(m);
                         let groupInfoDay = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=block);
                         let smInfo = await smg.methods.getStoremanInfo(selectedNodes[i]).call(block_identifier=block);
+                        let globalConf = await smg.methods.getStoremanConf().call(block_identifier=blockId);
                         let ii = await smg.methods.getStoremanIncentive(selectedNodes[i], m).call();
-                        let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(standaloneWeight)).divRound(web3.utils.toBN(10000))).divRound(web3.utils.toBN(groupInfoDay.depositWeight))
+                        let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(globalConf.standaloneWeight)).divRound(web3.utils.toBN(10000))).divRound(web3.utils.toBN(groupInfoDay.depositWeight))
                         if(ii != 0){
                                 console.log("- day Incentive:", m, smInfo.wkAddr, ii)
                                 let AllexpectIncentiveFromDe = web3.utils.toBN(0)
@@ -537,7 +535,7 @@ async function checkSmgIncentive(_groupId) {
                                                         continue
                                                 }
                                         }
-                                        let expectIncentivePn = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(standaloneWeight)).divRound(web3.utils.toBN(10000))
+                                        let expectIncentivePn = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(globalConf.standaloneWeight)).divRound(web3.utils.toBN(10000))
                                         AllexpectIncentiveFromPartner = AllexpectIncentiveFromPartner.add(expectIncentivePn)
                                 }
                                 console.log("-- sk incentive:", rate(web3.utils.toBN(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe)), ii, expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner).toString(10))
