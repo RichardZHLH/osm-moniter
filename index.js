@@ -503,7 +503,7 @@ async function checkSmgIncentive(_groupId) {
                         let block = await getLastBlockByEpoch(m);
                         let groupInfoDay = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=block);
                         let smInfo = await smg.methods.getStoremanInfo(selectedNodes[i]).call(block_identifier=block);
-                        let globalConf = await smg.methods.getStoremanConf().call(block_identifier=blockId);
+                        let globalConf = await smg.methods.getStoremanConf().call(block_identifier=block);
                         let ii = await smg.methods.getStoremanIncentive(selectedNodes[i], m).call();
                         let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(globalConf.standaloneWeight)).divRound(web3.utils.toBN(10000))).divRound(web3.utils.toBN(groupInfoDay.depositWeight))
                         if(ii != 0){
