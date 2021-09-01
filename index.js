@@ -20,8 +20,8 @@ const sf ={
 const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
-const lastChangeOwnerBlock = 	15991238
-const lastChangeOwnerBlockETH = 	12963697
+const lastChangeOwnerBlock = 	16374692
+const lastChangeOwnerBlockETH = 	13125381
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
 
@@ -251,7 +251,7 @@ async function monitorChangeOwner(){
                 obj["scAddr"] = events[i].address
                 switch(events[i].topics[0]){
                         case func:
-                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address)
+                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address, "blockNumber:",  events[i].blockNumber)
                                 obj["event"] = "OwnershipTransferred"
                                 obj["target"] = events[i].topics[2]
                                 break
@@ -297,7 +297,7 @@ async function monitorChangeOwnerEth(){
                 obj["scAddr"] = events[i].address
                 switch(events[i].topics[0]){
                         case func:
-                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address)
+                                console.log("OwnershipTransferred to ",  events[i].topics[2], "address:",events[i].address, "blockNumber:",  events[i].blockNumber)
                                 obj["event"] = "OwnershipTransferred"
                                 obj["target"] = events[i].topics[2]
                                 break
