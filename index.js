@@ -20,8 +20,8 @@ const sf ={
 const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
-const lastChangeOwnerBlock = 	16374692
-const lastChangeOwnerBlockETH = 	13125381
+const lastChangeOwnerBlock = 	17827095
+const lastChangeOwnerBlockETH = 	13687184
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
 
@@ -245,7 +245,7 @@ async function monitorChangeOwner(){
         }
         let events = await web3.eth.getPastLogs(options)
         for(let i=0; i<events.length; i++){
-                //console.log("event:", events[i])
+                console.log("event:", events[i])
                 let obj = {}
                 //assert.equal(events[i].blockNumber<lastChangeOwnerBlock,true,"owner,admin,Upgraded changed")
                 obj["scAddr"] = events[i].address
@@ -439,7 +439,7 @@ function basicEqual(A, B,s){
         if(C.lt(web3.utils.toBN("10000"))) {
           return
         }
-        console.log("C:", C)
+        console.log("C:", C.toString(10))
         assert(false, true, s)
         //assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
 }
@@ -757,7 +757,7 @@ async function addPartInToOwner(info, wkaddr, value){
 }
 async function checkSmgBalance() {
         let toBlock = await web3.eth.getBlockNumber()
-        console.log("toBlock:",toBlock)
+        console.log("checkSmgBalance toBlock:",toBlock)
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
         let balanceSc = web3.utils.toBN(0)
         let options = {
