@@ -20,6 +20,7 @@ const sf ={
 const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
+const lastFeeBlock = 17827095 // after that, no Fee
 const lastChangeOwnerBlock = 	17827095
 const lastChangeOwnerBlockETH = 	13687184
 const oldCrossEventFee = "9960"
@@ -760,6 +761,11 @@ async function checkSmgBalance() {
         console.log("checkSmgBalance toBlock:",toBlock)
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
         let balanceSc = web3.utils.toBN(0)
+        let optionsFee = {
+                fromBlock: 9300000,
+                toBlock:lastFeeBlock,
+                address:smgAdminAddr,
+        }
         let options = {
                 fromBlock: 9300000,
                 toBlock:toBlock,
@@ -767,8 +773,8 @@ async function checkSmgBalance() {
         }
         let info = new Map()
         let one
-        let crossMintEvents = await cross.getPastEvents("UserLockLogger", options)
-        let crossBurnEvents = await cross.getPastEvents("UserBurnLogger", options)
+        let crossMintEvents = await cross.getPastEvents("UserLockLogger", optionsFee)
+        let crossBurnEvents = await cross.getPastEvents("UserBurnLogger", optionsFee)
         let crossFee =  web3.utils.toBN(web3.utils.toWei(oldCrossEventFee))
         for(let i=0; i<crossMintEvents.length; i++){
                 crossFee = crossFee.add(web3.utils.toBN(crossMintEvents[i].returnValues.serviceFee))
