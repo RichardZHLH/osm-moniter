@@ -896,9 +896,11 @@ async function checkSmgBalance() {
                                 result = false
                                 one.isOk = false
                         }
-                        if(!node.incentive.mul(web3.utils.toBN(5)).lt(node.in.add(node.partin))){
+                        if(!node.incentive.mul(web3.utils.toBN(1)).lt(node.in.add(node.partin))){
                                 result = false
                                 one.isOk = false
+                                console.log("total incentive great than deposit, one:", one)
+                                console.log("node:", node.in.toString(10), node.partin.toString(10),node.incentive.toString(10))
                         }
                         ones.push(one)
                         //console.log("one:", one)
