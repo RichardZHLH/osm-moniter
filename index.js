@@ -21,8 +21,8 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 const lastFeeBlock = 17827095 // after that, no Fee
-const lastChangeOwnerBlock = 	17827095
-const lastChangeOwnerBlockETH = 	13687184
+const lastChangeOwnerBlock = 	20184414
+const lastChangeOwnerBlockETH = 	14612890
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
 
@@ -475,7 +475,8 @@ async function checkSmgIncentive(_groupId) {
                 }
 
                 let totalDepositCache = await listGroup.methods.getTotalDeposit(day).call();
-                console.log("totaldepodit day:", day, totalDepositCache)
+                console.log(" day totaldepodit:", day, totalDepositCache)
+                assert(totalDepositCache!=0, true, "totalDepositCache can not fetch, please check")
 
                 let groupNumber = await getLastBlockByEpoch(day)
                 groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=groupNumber)
