@@ -21,7 +21,7 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 const lastFeeBlock = 17827095 // after that, no Fee
-const lastChangeOwnerBlock = 	20184414
+const lastChangeOwnerBlock = 	 21023365
 const lastChangeOwnerBlockETH = 	14612890
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
