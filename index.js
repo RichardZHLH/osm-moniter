@@ -51,7 +51,11 @@ let CrossProxyEth = '0xfCeAAaEB8D564a9D0e71Ef36f027b9D162bC334e'
 let QuotaProxyEth = '0x169eA2E2C8783a9Da305F563C65793525e831F62'
 let OracleProxyEth = '0xBb38d10033b26F3836A8c1E41788206868b9F228'
 let KnownCap = {}
-let web3 = new Web3(new Web3.providers.HttpProvider("http://52.88.104.167:26891")) 
+let web3Option = {
+        timeout: 90000, // ms
+        clientConfig: {maxReceivedFrameSize: 9000000000, maxReceivedMessageSize: 9000000000}
+}
+let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
 //let web3 = new Web3(new Web3.providers.HttpProvider("http://44.236.235.123:26891"))
 
 // let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9", {
