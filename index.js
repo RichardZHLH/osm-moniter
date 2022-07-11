@@ -52,7 +52,7 @@ let QuotaProxyEth = '0x169eA2E2C8783a9Da305F563C65793525e831F62'
 let OracleProxyEth = '0xBb38d10033b26F3836A8c1E41788206868b9F228'
 let KnownCap = {}
 let web3Option = {
-        timeout: 90000, // ms
+        timeout: 300000, // ms
         clientConfig: {maxReceivedFrameSize: 9000000000, maxReceivedMessageSize: 9000000000}
 }
 let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
