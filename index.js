@@ -12,6 +12,10 @@ const SolidityEvent = require("web3_0/lib/web3/event.js");
 const { parse } = require('json2csv');
 const smgAbi = require("./abi.StoremanGroupDelegate.json")
 const { parseLog } = require('ethereum-event-logs')
+const axios = require('axios')
+const BigNumber = require('bignumber.js')
+
+const APIURL = 'https://thegraph.one/subgraphs/name/wanchain/StoremanGroup'
 
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
@@ -461,6 +465,9 @@ async function checkSmgIncentive(_groupId) {
 
         let today = parseInt(Date.now()/1000/3600/24)
         let groupIncentives = []
+        if(today - 3 > groupStartDay) {
+                groupStartDay = today - 3
+        }
         for(let day=groupStartDay; day<groupEndDay && day<today; day++){
                 let gi = await smg.methods.checkGroupIncentive(_groupId, day).call();
                 console.log("group incentive every day:", day, gi)
@@ -762,105 +769,120 @@ async function addPartInToOwner(info, wkaddr, value){
         //console.log("addPartInToOwner:", one)
 }
 async function checkSmgBalance() {
-        let toBlock = await web3.eth.getBlockNumber()
+        let toBlock = await web3.eth.getBlockNumber() - 100
         console.log("checkSmgBalance toBlock:",toBlock)
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
-        let balanceSc = web3.utils.toBN(0)
-        let optionsFee = {
-                fromBlock: 9300000,
-                toBlock:lastFeeBlock,
-                address:smgAdminAddr,
-        }
-        let options = {
-                fromBlock: 9300000,
-                toBlock:toBlock,
-                address:smgAdminAddr,
-        }
+        let balanceSc = new BigNumber(0)
+
         let info = new Map()
         let one
-        let crossMintEvents = await cross.getPastEvents("UserLockLogger", optionsFee)
-        let crossBurnEvents = await cross.getPastEvents("UserBurnLogger", optionsFee)
-        let crossFee =  web3.utils.toBN(web3.utils.toWei(oldCrossEventFee))
-        for(let i=0; i<crossMintEvents.length; i++){
-                crossFee = crossFee.add(web3.utils.toBN(crossMintEvents[i].returnValues.serviceFee))
-        }
-        for(let i=0; i<crossBurnEvents.length; i++){
-                crossFee = crossFee.add(web3.utils.toBN(crossBurnEvents[i].returnValues.serviceFee))
-        }
+
+        let crossFee =   web3.utils.toBN(new BigNumber("66970000000000000000000"))
+
         console.log("crossFee total:", crossFee.toString(10))
-        let events = await smg.getPastEvents("allEvents", options)
-        for(let i=0; i<events.length; i++){
+
+        let skipNumber = 0
+        let lastBlock = 0
+        while(true) {
+          const queryString = `
+          {
+            exampleEntities(first:1000,orderBy:block, skip:${skipNumber}) {
+              id
+              action
+              count
+              block
+              wkAddr
+              sender
+            }
+          }
+          `
+          const body = {query: queryString, variable:""}
+          let ret = await axios.post(APIURL, JSON.stringify(body));
+          let events = ret.data.data.exampleEntities
+          console.log("events length:", events.length, skipNumber)
+          skipNumber += 1000
+          for(let i=0; i<events.length; i++){
                 let event = events[i]
-                switch(event.event){
+                if(event.block > toBlock ) {
+                        continue // ignore too new block
+                }
+                //console.log("eent:", event, web3.utils.toBN(event.count).toString(10))
+                switch(event.action){
                         case "stakeInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 1)
-                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
+                                one.in = one.in.add(web3.utils.toBN(event.count))
                                 break
                         case "stakeAppendEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr,event.returnValues.from, 1)
-                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr,event.sender, 1)
+                                one.in = one.in.add(web3.utils.toBN(event.count))
                                 break
                         case "delegateInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 2)
-                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
+                                one.in = one.in.add(web3.utils.toBN(event.count))
 
                                 break
                         case "partInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 3)
-                                one.in = one.in.add(web3.utils.toBN(event.returnValues.value))
-                                addPartInToOwner(info, event.returnValues.wkAddr, web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
+                                one.in = one.in.add(web3.utils.toBN(event.count))
+                                addPartInToOwner(info, event.wkAddr, web3.utils.toBN(event.count))
                                 break      
                         case "storemanGroupContributeEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
                                 break                                
                         case "stakeClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.value))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 1)
-                                one.out = one.out.add(web3.utils.toBN(event.returnValues.value))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
+                                one.out = one.out.add(web3.utils.toBN(event.count))
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 2)
-                                one.out = one.out.add(web3.utils.toBN(event.returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
+                                one.out = one.out.add(web3.utils.toBN(event.count))
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "partClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.from, 3)
-                                one.out = one.out.add(web3.utils.toBN(event.returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
+                                one.out = one.out.add(web3.utils.toBN(event.count))
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateIncentiveClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.sender, 2)
-                                one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
+                                one.incentive = one.incentive.add(web3.utils.toBN(event.count))
                                 assert.ok(one.incentive.lt(one.in))
                                 break                                  
                         case "stakeIncentiveClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
-                                one = getOnefromInfo(info, event.returnValues.wkAddr, event.returnValues.sender, 1)
-                                one.incentive = one.incentive.add(web3.utils.toBN(event.returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
+                                one.incentive = one.incentive.add(web3.utils.toBN(event.count))
 
                                 if(!one.incentive.lt(one.in.add(one.partin))){
-                                        console.log("one:", event.returnValues.wkAddr, event.returnValues.sender, one)
+                                        console.log("one:", event.wkAddr, event.sender, one)
                                 }
                                         
                                 assert.ok(one.incentive.lt(one.in.add(one.partin)))
                                 break                                  
                         case "stakeIncentiveCrossFeeEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.returnValues.amount))
+                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
                                 break                                  
                                                                                                                                                         
 
                 }
+            }
+                if(events.length < 1000) {
+                        break
+                }
         }
+      
+
         balanceSc = balanceSc.add(crossFee)
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
