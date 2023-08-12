@@ -25,7 +25,7 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 const lastFeeBlock = 17827095 // after that, no Fee
-const lastChangeOwnerBlock = 	 23312012
+const lastChangeOwnerBlock = 	 27628516
 const lastChangeOwnerBlockETH =  15815130
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
@@ -273,6 +273,7 @@ async function monitorChangeOwner(){
                                 obj["event"] = "Upgraded"
                                 obj["target"] = events[i].topics[1]
                                 console.log("Upgraded to ", events[i].topics[1], "address:",events[i].address)
+                                break
                         case func4:
                                 obj["event"] = "removeAdmin"
                                 obj["target"] = events[i].data
