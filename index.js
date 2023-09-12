@@ -470,6 +470,7 @@ async function checkSmgIncentive(_groupId) {
                 groupStartDay = today - 3
         }
         for(let day=groupStartDay; day<groupEndDay && day<today; day++){
+                if(day == 19609) continue; // this day result is bad;
                 let gi = await smg.methods.checkGroupIncentive(_groupId, day).call();
                 console.log("group incentive every day:", day, gi)
                 groupIncentives[day] = gi
@@ -513,6 +514,7 @@ async function checkSmgIncentive(_groupId) {
 
         for(let i=0; i<groupInfo.memberCountDesign; i++){
                 for(let m=groupStartDay; m<groupEndDay && m<today;m++){
+                        if(m == 19609) continue; // this day result is bad;
                         console.log("\nincentive group day:", groupInfo.groupId, m)
                         let block = await getLastBlockByEpoch(m);
                         let groupInfoDay = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=block);
