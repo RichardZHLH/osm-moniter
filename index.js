@@ -776,6 +776,9 @@ async function checkSmgBalance() {
         console.log("checkSmgBalance toBlock:",toBlock)
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
         let balanceSc = new BigNumber(0)
+        let depositIn = new BigNumber(0)
+        let depositOut = new BigNumber(0)
+        let incentiveOut = new BigNumber(0)
 
         let info = new Map()
         let one
@@ -786,6 +789,8 @@ async function checkSmgBalance() {
 
         let skipNumber = 0
         let lastBlock = 0
+        let AllWorker= new Set()
+        let allDelegator = {}
         while(true) {
           const queryString = `
           {
@@ -812,58 +817,69 @@ async function checkSmgBalance() {
                 //console.log("eent:", event, web3.utils.toBN(event.count).toString(10))
                 switch(event.action){
                         case "stakeInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
+                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
                                 one.in = one.in.add(web3.utils.toBN(event.count))
+                                AllWorker.add(event.wkAddr)
                                 break
                         case "stakeAppendEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
+                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr,event.sender, 1)
                                 one.in = one.in.add(web3.utils.toBN(event.count))
                                 break
                         case "delegateInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
+                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
                                 one.in = one.in.add(web3.utils.toBN(event.count))
-
+                                allDelegator[event.wkAddr+event.sender] = [event.wkAddr, event.sender]
                                 break
                         case "partInEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
+                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
                                 one.in = one.in.add(web3.utils.toBN(event.count))
                                 addPartInToOwner(info, event.wkAddr, web3.utils.toBN(event.count))
                                 break      
                         case "storemanGroupContributeEvent":
-                                balanceSc = balanceSc.add(web3.utils.toBN(event.count))
+                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
                                 break                                
                         case "stakeClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
                                 one.out = one.out.add(web3.utils.toBN(event.count))
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
                                 one.out = one.out.add(web3.utils.toBN(event.count))
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "partClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
                                 one.out = one.out.add(web3.utils.toBN(event.count))
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateIncentiveClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                incentiveOut = incentiveOut.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
                                 one.incentive = one.incentive.add(web3.utils.toBN(event.count))
                                 assert.ok(one.incentive.lt(one.in))
                                 break                                  
                         case "stakeIncentiveClaimEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                incentiveOut = incentiveOut.plus(web3.utils.toBN(event.count))
                                 one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
                                 one.incentive = one.incentive.add(web3.utils.toBN(event.count))
 
@@ -874,7 +890,7 @@ async function checkSmgBalance() {
                                 assert.ok(one.incentive.lt(one.in.add(one.partin)))
                                 break                                  
                         case "stakeIncentiveCrossFeeEvent":
-                                balanceSc = balanceSc.sub(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
                                 break                                  
                                                                                                                                                         
 
@@ -885,8 +901,12 @@ async function checkSmgBalance() {
                 }
         }
       
+        fs.writeFileSync("./allDelegator.json", JSON.stringify(Object.values(allDelegator)))
 
-        balanceSc = balanceSc.add(crossFee)
+        fs.writeFileSync("./AllWorker.json", JSON.stringify(Array.from(AllWorker)))
+        
+        console.log("++++++++++++++++++++++++++++++++++++++++++++++:", depositIn.toString(), depositOut.toString(), incentiveOut.toString())
+        balanceSc = balanceSc.plus(crossFee)
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
         let result = true
