@@ -1,5 +1,7 @@
 const Web3 = require('web3')
 const fs = require('fs')
+const XLSX = require('xlsx');
+
 const wanutil = require('wanchain-util');
 const WanTx = wanutil.wanchainTx
 const ethTx = require('ethereumjs-tx');
@@ -101,59 +103,7 @@ let tm,smg,quota,metric,pos,listGroup,wrc20;
 
 
 
-async function wanSendTransaction(sf, value, sdata, to, nonce=undefined){
-        if(nonce == undefined){
-                nonce = await web3.eth.getTransactionCount(sf.addr,"pending")
-        }
-        let rawTx = {
-            Txtype:1,
-            nonce:  nonce,
-            gasPrice: gGasPrice,
-            gas: gGasLimit,
-            to: to,
-            chainId: 3,
-            value: value,
-            data: sdata,
-        }
-         console.log("rawTx:", rawTx)
-        let tx = new WanTx(rawTx)
-        let pri = sf.priv
-        
-        if(typeof(pri) == 'string'){
-            pri = Buffer.from(sf.priv.slice(2), 'hex')
-        }
-        tx.sign(pri)
-        const serializedTx = '0x'+tx.serialize().toString('hex');
-    
-        let receipt =  web3.eth.sendSignedTransaction(serializedTx)
-        return receipt
-    }
-    async function ethSendTransaction(sf, value, sdata, to, nonce=undefined){
-        if(nonce == undefined){
-                nonce = await web3.eth.getTransactionCount(sf.addr,"pending")
-        }
-        let rawTx = {
-            nonce:  nonce,
-            gasPrice: gGasPrice,
-            gas: gGasLimit,
-            to: to,
-            chainId: 3,
-            value: value,
-            data: sdata,
-        }
-         console.log("rawTx:", rawTx)
-        let tx = new ethTx(rawTx)
-        let pri = sf.priv
-        
-        if(typeof(pri) == 'string'){
-            pri = Buffer.from(sf.priv.slice(2), 'hex')
-        }
-        tx.sign(pri)
-        const serializedTx = '0x'+tx.serialize().toString('hex');
-    
-        let receipt =  web3.eth.sendSignedTransaction(serializedTx)
-        return receipt
-    }
+
 
 async function init() {
         let content;
@@ -587,88 +537,32 @@ async function getAvgRewardRatio(){
 }
 
 async function check(){
-        await init();
+        await init()
+        let Data = []
+        let curWorker = await smg.methods.getSelectedStoreman('0x000000000000000000000000000000000000000000000041726965735f303436').call()
+        curWorker = curWorker.map(item=>item.toLowerCase())
+        console.log("curWorker:", curWorker)
+        let partners = require('./allPartner.json')
+        for(let i=0; i<partners.length; i++) {
+                let partner = partners[i]
+                let pValue = await smg.methods.getSmPartnerInfo(partner[0], partner[1]).call()
+                // Data.push({worker:partner[0], partner:partner[1],deposit:pValue.deposit})
 
-        let htmlString=""
-        let OK = true;
-        let ret = await monitorChangeOwner()
-        if(ret.length != 0){
-                console.log("monitorChangeOwner:", ret)
-                OK = false 
-                htmlString += tableify(ret)
-        }
-        ret = await monitorChangeOwnerEth()
-        if(ret.length != 0){
-                console.log("monitorChangeOwnerEth:", ret)
-                OK = false 
-                htmlString += tableify(ret)
+
+
+
+                if(curWorker.indexOf(partner[0]) == -1 && pValue.deposit!=0 ) {
+                        Data.push({worker:partner[0], partner:partner[1],deposit:pValue.deposit, quited:pValue.quited})
+                        // console.log(`%s\t%s\t%s\t%s`, partner[0], partner[1], pValue.deposit, pValue.quited)
+                }
         }
 
-        try{
-                let result = await checkSmgBalance();
-                if(result.result){
-                        htmlString += "<p> contract balance is correct </p>"
-                } else {
-                        OK = false
-                        htmlString += "<p> contract balance is wrong </p>"
-                }
-                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","partin","out","incentive","deposit","isOk"]})
-                fs.writeFileSync("/tmp/Investors.csv",csv)
-        }catch(err){
-                htmlString += "<p> checkSmgBalance try-catch error. check the console output for detail. </p>"
-                htmlString += err
-                OK = false
-                console.log("checkSmgBalance failed:", err)
-                if(-1 != err.toString().indexOf("CONNECTION ERROR")){
-                        console.log("CONNECTION ERROR, ignore this check")
-                        process.exit(0);
-                }
-        }
-        let groupIds = await getActiveGroupIDs();
-        for(let i=0; i<groupIds.length; i++){
-                let grId = groupIds[i]
-                console.log("group:", grId)
-                try {
-                        await verifyDepositCurrent(grId)
-                        htmlString = htmlString + "<p> group" + grId +  " deposit is correct </p>"
-                }catch(err){
-                        OK = false
-                        htmlString = htmlString + "<p> group" + grId +  " deposit check exception </p>"
-                        htmlString += err
-                        console.log("verifyDepositCurrent catch error:", err)
-                        if(-1 != err.toString().indexOf("CONNECTION ERROR")){
-                                console.log("CONNECTION ERROR, ignore this check")
-                                process.exit(0);
-                        }
-                }
-
-                try {
-                        await checkSmgIncentive(grId);
-                        htmlString = htmlString + "<p> group" + grId +  " incentive is correct </p>"
-                }catch(err){
-                        OK = false
-                        htmlString = htmlString + "<p> group" + grId +  " incentive check exception.  </p>"
-                        htmlString += err
-                        console.log("checkSmgIncentive catch error:", err)
-                        if(-1 != err.toString().indexOf("CONNECTION ERROR")){
-                                console.log("CONNECTION ERROR, ignore this check")
-                                process.exit(0);
-                        }
-                }
-        }
 
         web3.currentProvider.disconnect();
-        if(OK){
-                console.log("html OK:", htmlString)
-                //sendEmail({subject: "Pass-Openstoreman check OK",html: htmlString,attachments: [{filename: 'Investors.csv',path: '/tmp/Investors.csv'},{filename: 'log',path: '/var/lib/jenkins/jobs/'+ job + '/builds/' + build_number+'/log'}]});
-        }else{
-                console.log("html failed:", htmlString)
-                sendEmail({subject: "Faild -Openstoreman check failed",
-                        html: htmlString,
-                        attachments: [{filename: 'Investors.csv',path: '/tmp/Investors.csv'},{filename: 'log',path: '/var/lib/jenkins/jobs/'+ job + '/builds/' + build_number+'/log'}]}
-                        );
-        }
-
+        const worksheet = XLSX.utils.json_to_sheet(Data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+        XLSX.writeFile(workbook, 'data.xlsx');        
 }
 
 async function main(){
