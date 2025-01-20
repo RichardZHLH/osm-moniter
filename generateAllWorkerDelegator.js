@@ -436,9 +436,10 @@ async function check(){
                         result.ones[i].deposit = BigNumber(result.ones[i].deposit).shiftedBy(-18).toFixed(2)
                         result.ones[i].in = BigNumber(result.ones[i].in).shiftedBy(-18).toFixed(2)
                         result.ones[i].out = BigNumber(result.ones[i].out).shiftedBy(-18).toFixed(2)
-                        result.ones[i].incentive = BigNumber(result.ones[i].incentive).shiftedBy(-18).toFixed(2)
+                        result.ones[i].claimedIncentive = BigNumber(result.ones[i].claimedIncentive).shiftedBy(-18).toFixed(2)
+                        result.ones[i].unclaimedIncentive = BigNumber(result.ones[i].unclaimedIncentive).shiftedBy(-18).toFixed(2)
                 }
-                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out", "incentive","deposit","isSelected"]})
+                csv =   parse(result.ones, {fields:["type","wkAddr","sender","in","out", "claimedIncentive","unclaimedIncentive","deposit","isSelected"]})
                 fs.writeFileSync("./Investors.csv",csv)
                 // fs.writeFileSync("/tmp/g8all.json", JSON.stringify(result.ones,null,2))
         }catch(err){
