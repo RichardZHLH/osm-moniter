@@ -59,8 +59,8 @@ let web3Option = {
         timeout: 300000, // ms
         clientConfig: {maxReceivedFrameSize: 9000000000, maxReceivedMessageSize: 9000000000}
 }
-// let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
-let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.4:26891"))
+let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
+// let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.4:26891"))
 
 // let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9", {
 //         clientConfig: {maxReceivedFrameSize: 1000000000, maxReceivedMessageSize: 1000000000}
@@ -693,6 +693,7 @@ async function checkSmgBalance() {
                         if(node.type == 1){
                                 n1 = await smg.methods.getStoremanInfo(wkAddr).call(block_identifier=toBlock);
                                 one.type = "candidate"
+                                one.unclaimedIncentive = n1.incentive.toString(10)
                         }else if(node.type == 2){
                                 n1 = await smg.methods.getSmDelegatorInfo(wkAddr, from).call(block_identifier=toBlock);
                                 one.type = "delegator"
@@ -705,7 +706,7 @@ async function checkSmgBalance() {
                         one.deposit = n1.deposit
                         one.in = node.in.toString(10)
                         one.out = node.out.toString(10)
-                        one.incentive = node.incentive.toString(10)
+                        one.claimedIncentive = node.incentive.toString(10)
                         one.isOk = true
                         if(n1.deposit != node.in.sub(node.out).toString(10)) {
                                 result = false
