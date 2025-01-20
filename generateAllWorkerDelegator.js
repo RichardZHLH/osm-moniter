@@ -698,9 +698,11 @@ async function checkSmgBalance() {
                         }else if(node.type == 2){
                                 n1 = await smg.methods.getSmDelegatorInfo(wkAddr, from).call(block_identifier=toBlock);
                                 one.type = "delegator"
+                                one.unclaimedIncentive = n1.incentive.toString(10)
                         }else if(node.type == 3){
                                 n1 = await smg.methods.getSmPartnerInfo(wkAddr, from).call(block_identifier=toBlock);
                                 one.type = "partner"
+                                one.unclaimedIncentive = '0'
                         }
                         one.wkAddr = wkAddr
                         one.sender = from
