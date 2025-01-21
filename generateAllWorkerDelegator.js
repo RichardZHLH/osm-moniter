@@ -59,8 +59,8 @@ let web3Option = {
         timeout: 300000, // ms
         clientConfig: {maxReceivedFrameSize: 9000000000, maxReceivedMessageSize: 9000000000}
 }
-let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
-// let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.4:26891"))
+//let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
+let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.4:26891"))
 
 // let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9", {
 //         clientConfig: {maxReceivedFrameSize: 1000000000, maxReceivedMessageSize: 1000000000}
@@ -424,10 +424,6 @@ async function check(){
                 }
                 // delete deposit == 0 items
                 for(let i=0; i<result.ones.length; i++) {
-                        if(BigNumber(result.ones[i].deposit).comparedTo(1e18) < 0) {
-                                delete result.ones[i] // TODO ,this will left a null item
-                                continue
-                        }
                         if(selectedNodes.indexOf(result.ones[i].wkAddr)== -1) {
                                 result.ones[i].isSelected = 'N'
                         } else {
