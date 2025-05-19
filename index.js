@@ -25,8 +25,8 @@ const gGasPrice = 1000000000
 const gGasLimit = 1000000
 let scAddr;
 const lastFeeBlock = 17827095 // after that, no Fee
-const lastChangeOwnerBlock = 	 37729135
-const lastChangeOwnerBlockETH =  18010435
+const lastChangeOwnerBlock = 	  37909364
+const lastChangeOwnerBlockETH =  22216051
 const oldCrossEventFee = "9960"
 let wan_atEth = ""
 
@@ -903,10 +903,10 @@ async function checkSmgBalance() {
                 }
         }
       
-        fs.writeFileSync("./allDelegator.json", JSON.stringify(Object.values(allDelegator)))
-        fs.writeFileSync("./allPartner.json", JSON.stringify(Object.values(allPartner)))
+        // fs.writeFileSync("./allDelegator.json", JSON.stringify(Object.values(allDelegator)))
+        // fs.writeFileSync("./allPartner.json", JSON.stringify(Object.values(allPartner)))
 
-        fs.writeFileSync("./AllWorker.json", JSON.stringify(Array.from(AllWorker)))
+        // fs.writeFileSync("./AllWorker.json", JSON.stringify(Array.from(AllWorker)))
         
         console.log("++++++++++++++++++++++++++++++++++++++++++++++:", depositIn.toString(), depositOut.toString(), incentiveOut.toString())
         balanceSc = balanceSc.plus(crossFee)
