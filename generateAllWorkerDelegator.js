@@ -13,10 +13,12 @@ const { parse } = require('json2csv');
 const smgAbi = require("./abi.StoremanGroupDelegate.json")
 const { parseLog } = require('ethereum-event-logs')
 const axios = require('axios')
-const BigNumber = require('bignumber.js')
+const BigNumber = require('bignumber.js');
+const ethers = require('ethers')
 
-const APIURL = 'https://thegraph.one/subgraphs/name/wanchain/StoremanGroup'
+// const APIURL = 'https://thegraph.one/subgraphs/name/wanchain/StoremanGroup'
 
+const APIURL = 'https://wan-subgraph.xyz/subgraphs/name/wanchain/StoremanGroup'
 const sf ={
         priv:"0x303bc5cc3af0f655430909a4a3add6a411fa9c4b7f182a8d2a1a419614e818f0",
         addr:"0xf1cf205442bea02e51e2c68ff4cc698e5879663c"
@@ -60,7 +62,8 @@ let web3Option = {
         clientConfig: {maxReceivedFrameSize: 9000000000, maxReceivedMessageSize: 9000000000}
 }
 //let web3 = new Web3(new Web3.providers.HttpProvider("https://gwan-ssl.wandevs.org:56891",web3Option))
-let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.4:26891"))
+let web3 = new Web3(new Web3.providers.HttpProvider("http://192.168.1.179:26891"))
+let ehttpProvider = new ethers.providers.JsonRpcProvider("http://192.168.1.179:26891")
 
 // let web3 = new Web3(new Web3.providers.WebsocketProvider("wss://api.wanchain.org:8443/ws/v3/4ffef9104ced391e4d447e9a8d8ce40f7a137698b24c566db21d2528aac6d0d9", {
 //         clientConfig: {maxReceivedFrameSize: 1000000000, maxReceivedMessageSize: 1000000000}
@@ -96,7 +99,7 @@ if(testnet) {
 
 }
 
-let tm,smg,quota,metric,pos,listGroup,wrc20;
+let tm,smg,smgE,quota,metric,pos,listGroup,wrc20;
 
 
 
@@ -131,6 +134,7 @@ async function init() {
         content = fs.readFileSync(listGroupfile, 'utf8')
         let listGroupAbi = JSON.parse(content)
         smg = new  web3.eth.Contract(smgAbi, smgAdminAddr);
+        smgE = new ethers.Contract(smgAdminAddr, smgAbi, ehttpProvider)
         tm =  new  web3.eth.Contract(tmAbi, tokenManagerAddr);
         quota =  new  web3.eth.Contract(quotaAbi, quotaAddr);
         metric = new  web3.eth.Contract(metricAbi, metricAddr);
@@ -154,14 +158,14 @@ async function calQuitDelegatefromBase(gid, blockId){
                 toBlock:blockId,
                 filter:{wkAddr:selected}
         }
-        let quitedValue = web3.utils.toBN(0)
+        let quitedValue = ethers.BigNumber.from(0)
         let event = await smg.getPastEvents("delegateOutEvent", options)
         for(let i=0; i<event.length; i++){
                 let deOut = await smg.methods.getSmDelegatorInfo(event[i].returnValues.wkAddr,event[i].returnValues.from).call(block_identifier=event[i].blockNumber)
                 let deCur = await smg.methods.getSmDelegatorInfo(event[i].returnValues.wkAddr,event[i].returnValues.from).call(block_identifier=blockId)
                 //console.log("deCur:", deCur)
                 if(deCur.deposit != 0){
-                        quitedValue = quitedValue.add(web3.utils.toBN(deOut.deposit))
+                        quitedValue = quitedValue.add(ethers.BigNumber.from(deOut.deposit))
                 }
         }
         return quitedValue;
@@ -174,11 +178,11 @@ async function calQuitPartfromBase(gid, blockId){
                 toBlock:blockId,
                 filter:{wkAddr:selected}
         }
-        let quitedValue = web3.utils.toBN(0)
+        let quitedValue = ethers.BigNumber.from(0)
         let event = await smg.getPastEvents("partOutEvent", options)
         for(let i=0; i<event.length; i++){
                 let de = await smg.methods.getSmPartnerInfo(event[i].returnValues.wkAddr,event[i].returnValues.from).call(block_identifier=event[i].blockNumber)
-                quitedValue = quitedValue.add(web3.utils.toBN(de.deposit))
+                quitedValue = quitedValue.add(ethers.BigNumber.from(de.deposit))
         }
         return quitedValue;
 }
@@ -193,42 +197,42 @@ async function verifyDeposit(gid,blockId){
         let groupInfo = await smg.methods.getStoremanGroupInfo(gid).call(block_identifier=blockId);
         //console.log("groupInfo:", groupInfo)
         assert.equal(25, groupInfo.memberCountDesign,'count is wrong')
-        let totalDeposit = web3.utils.toBN(0)
-        let totalDepositWeight = web3.utils.toBN(0)
+        let totalDeposit = ethers.BigNumber.from(0)
+        let totalDepositWeight = ethers.BigNumber.from(0)
         let selected = await smg.methods.getSelectedStoreman(gid).call(block_identifier=blockId);
         for(let i=0; i<parseInt(groupInfo.memberCountDesign);i++){
-                let deTotal =  web3.utils.toBN(0)
-                let pnTotal =  web3.utils.toBN(0)
+                let deTotal =  ethers.BigNumber.from(0)
+                let pnTotal =  ethers.BigNumber.from(0)
 
                 let sk = await smg.methods.getStoremanInfo(selected[i]).call(block_identifier=blockId);
                 // console.log("sk:", sk)
-                totalDeposit = totalDeposit.add(web3.utils.toBN(sk.deposit))
-                totalDeposit = totalDeposit.add(web3.utils.toBN(sk.delegateDeposit))
-                totalDeposit = totalDeposit.add(web3.utils.toBN(sk.partnerDeposit))
-                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.deposit).mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000)))
-                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.partnerDeposit).mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000)))
-                totalDepositWeight = totalDepositWeight.add(web3.utils.toBN(sk.delegateDeposit))
+                totalDeposit = totalDeposit.add(ethers.BigNumber.from(sk.deposit))
+                totalDeposit = totalDeposit.add(ethers.BigNumber.from(sk.delegateDeposit))
+                totalDeposit = totalDeposit.add(ethers.BigNumber.from(sk.partnerDeposit))
+                totalDepositWeight = totalDepositWeight.add(ethers.BigNumber.from(sk.deposit).mul(ethers.BigNumber.from(weight)).divRound(ethers.BigNumber.from(10000)))
+                totalDepositWeight = totalDepositWeight.add(ethers.BigNumber.from(sk.partnerDeposit).mul(ethers.BigNumber.from(weight)).divRound(ethers.BigNumber.from(10000)))
+                totalDepositWeight = totalDepositWeight.add(ethers.BigNumber.from(sk.delegateDeposit))
                 for(let k=0; k<parseInt(sk.delegatorCount); k++){
                         let deAddr = await smg.methods.getSmDelegatorAddr(sk.wkAddr, k).call(block_identifier=blockId);
                         let de = await smg.methods.getSmDelegatorInfo(sk.wkAddr, deAddr).call(block_identifier=blockId);
                         if(!de.quited){
-                                deTotal = deTotal.add(web3.utils.toBN(de.deposit))
+                                deTotal = deTotal.add(ethers.BigNumber.from(de.deposit))
                         }
                 }
       
-                let cap = web3.utils.toBN(0)
+                let cap = ethers.BigNumber.from(0)
                 if(KnownCap[sk.wkAddr.toLowerCase()]){
-                        cap = web3.utils.toBN(KnownCap[sk.wkAddr.toLowerCase()])
+                        cap = ethers.BigNumber.from(KnownCap[sk.wkAddr.toLowerCase()])
                 }
-                if(deTotal.toString(10) !=  web3.utils.toBN(sk.delegateDeposit).sub(cap).toString(10)){
-                        console.log("********************deTotal, sk.delegateDeposit:", deTotal.toString(10) , web3.utils.toBN(sk.delegateDeposit).sub(web3.utils.toBN(KnownCap[sk.wkAddr.toLowerCase()])).toString(10),sk.wkAddr)
-                        assert.equal(deTotal.toString(10), web3.utils.toBN(sk.delegateDeposit).sub(cap).toString(10), "delegate deposit is wrong")
+                if(deTotal.toString(10) !=  ethers.BigNumber.from(sk.delegateDeposit).sub(cap).toString(10)){
+                        console.log("********************deTotal, sk.delegateDeposit:", deTotal.toString(10) , ethers.BigNumber.from(sk.delegateDeposit).sub(ethers.BigNumber.from(KnownCap[sk.wkAddr.toLowerCase()])).toString(10),sk.wkAddr)
+                        assert.equal(deTotal.toString(10), ethers.BigNumber.from(sk.delegateDeposit).sub(cap).toString(10), "delegate deposit is wrong")
                 }
                 for(let m=0; m<parseInt(sk.partnerCount); m++){
                         let pnAddr = await smg.methods.getSmPartnerAddr(sk.wkAddr, m).call(block_identifier=blockId);
                         let pn = await smg.methods.getSmPartnerInfo(sk.wkAddr, pnAddr).call(block_identifier=blockId);
                         if(!pn.quited){
-                                pnTotal = pnTotal.add(web3.utils.toBN(pn.deposit))
+                                pnTotal = pnTotal.add(ethers.BigNumber.from(pn.deposit))
                         }
                 }
                 if(pnTotal.toString(10) != sk.partnerDeposit){
@@ -243,21 +247,21 @@ async function verifyDeposit(gid,blockId){
         console.log("groupdeposit:", groupInfo.deposit)
         console.log("totalDeposit:", totalDeposit.add(quitedDelegate).add(quitedPart).toString(10),  blockId, gid)
         assert.equal(groupInfo.deposit, totalDeposit.add(quitedDelegate).add(quitedPart).toString(10), "totalDeposit is wrong")
-        console.log("total DepositWeight: ", totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000))).toString(10), blockId)
+        console.log("total DepositWeight: ", totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(ethers.BigNumber.from(weight)).divRound(ethers.BigNumber.from(10000))).toString(10), blockId)
         console.log("group DepositWeight: ", groupInfo.depositWeight, blockId)
         if(gid != "0x000000000000000000000000000000000000000000000041726965735f303037") {
-                assert.equal(groupInfo.depositWeight, totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(web3.utils.toBN(weight)).divRound(web3.utils.toBN(10000))).toString(10), "totalDepositWeight is wrong")
+                assert.equal(groupInfo.depositWeight, totalDepositWeight.add(quitedDelegate).add(quitedPart.mul(ethers.BigNumber.from(weight)).divRound(ethers.BigNumber.from(10000))).toString(10), "totalDepositWeight is wrong")
         }
 
 }
 
 
 function basicEqual(A, B,s){
-        if(A.divRound(web3.utils.toBN(10000)).toString(10) != B.divRound(web3.utils.toBN(10000)).toString(10)){
-                console.log("-----------------------:",A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10))
+        if(A.divRound(ethers.BigNumber.from(10000)).toString(10) != B.divRound(ethers.BigNumber.from(10000)).toString(10)){
+                console.log("-----------------------:",A.divRound(ethers.BigNumber.from(10000)).toString(10), B.divRound(ethers.BigNumber.from(10000)).toString(10))
         }
-        if(A.divRound(web3.utils.toBN(10000)).toString(10) == B.divRound(web3.utils.toBN(10000)).toString(10)
-        || A.add(web3.utils.toBN(9999)).divRound(web3.utils.toBN(10000)).toString(10) == B.add(web3.utils.toBN(9999)).divRound(web3.utils.toBN(10000)).toString(10)
+        if(A.divRound(ethers.BigNumber.from(10000)).toString(10) == B.divRound(ethers.BigNumber.from(10000)).toString(10)
+        || A.add(ethers.BigNumber.from(9999)).divRound(ethers.BigNumber.from(10000)).toString(10) == B.add(ethers.BigNumber.from(9999)).divRound(ethers.BigNumber.from(10000)).toString(10)
         ) {
                 return
         }
@@ -268,15 +272,15 @@ function basicEqual(A, B,s){
           C = A.sub(B)
         }
       
-        if(C.lt(web3.utils.toBN("10000"))) {
+        if(C.lt(ethers.BigNumber.from("10000"))) {
           return
         }
         console.log("C:", C.toString(10))
         assert(false, true, s)
-        //assert.equal(A.divRound(web3.utils.toBN(10000)).toString(10), B.divRound(web3.utils.toBN(10000)).toString(10), s)
+        //assert.equal(A.divRound(ethers.BigNumber.from(10000)).toString(10), B.divRound(ethers.BigNumber.from(10000)).toString(10), s)
 }
 function rate(A, B) {
-        return web3.utils.toBN(10000000).mul(A).divRound(B).mul(web3.utils.toBN(365)).toString(10)
+        return ethers.BigNumber.from(10000000).mul(A).divRound(B).mul(ethers.BigNumber.from(365)).toString(10)
 }
 async function checkSmgIncentive(_groupId) {
         let groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call()
@@ -316,19 +320,19 @@ async function checkSmgIncentive(_groupId) {
                 let groupNumber = await getLastBlockByEpoch(day)
                 groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=groupNumber)
 
-                let p1Return = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posAvg[0])).divRound(web3.utils.toBN(10000)).divRound(web3.utils.toBN(365))
-                let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0]).mul(web3.utils.toBN(10).pow(web3.utils.toBN(18)))).divRound(web3.utils.toBN(totalDepositCache)).divRound(web3.utils.toBN(10000))
-                //let capReturn = web3.utils.toBN(groupInfo.deposit).mul(web3.utils.toBN(posCap[0])).divRound(web3.utils.toBN(totalDepositCache))
+                let p1Return = ethers.BigNumber.from(groupInfo.deposit).mul(ethers.BigNumber.from(posAvg[0])).divRound(ethers.BigNumber.from(10000)).divRound(ethers.BigNumber.from(365))
+                let capReturn = ethers.BigNumber.from(groupInfo.deposit).mul(ethers.BigNumber.from(posCap[0]).mul(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))).divRound(ethers.BigNumber.from(totalDepositCache)).divRound(ethers.BigNumber.from(10000))
+                //let capReturn = ethers.BigNumber.from(groupInfo.deposit).mul(ethers.BigNumber.from(posCap[0])).divRound(ethers.BigNumber.from(totalDepositCache))
                 let posRet = await pos.methods.getMinIncentive(groupInfo.deposit, day, totalDepositCache).call();
                 console.log("getMinIncentive:", web3.utils.fromWei(posRet))
                 if(p1Return.lt(capReturn)){
-                        basicEqual( web3.utils.toBN(posRet), p1Return, "group Incentive is wrong")
+                        basicEqual( ethers.BigNumber.from(posRet), p1Return, "group Incentive is wrong")
                 } else {
-                        basicEqual( web3.utils.toBN(posRet), capReturn, "group Incentive is wrong")
+                        basicEqual( ethers.BigNumber.from(posRet), capReturn, "group Incentive is wrong")
                 }
                 let co = await smg.methods.getChainTypeCo(groupInfo.chain1, groupInfo.chain2).call(block_identifier=groupNumber)
                 if(gi.toString(10) != 0){
-                        basicEqual(web3.utils.toBN(gi), web3.utils.toBN(posRet).mul(web3.utils.toBN(co)).divRound(web3.utils.toBN(10000)),  "group Incentive is wrong")
+                        basicEqual(ethers.BigNumber.from(gi), ethers.BigNumber.from(posRet).mul(ethers.BigNumber.from(co)).divRound(ethers.BigNumber.from(10000)),  "group Incentive is wrong")
                 }
                 let metricInfo = await metric.methods.getPrdInctMetric(_groupId, day, day).call()
                 console.log("day metric info:", day, metricInfo)
@@ -343,10 +347,10 @@ async function checkSmgIncentive(_groupId) {
                         let smInfo = await smg.methods.getStoremanInfo(selectedNodes[i]).call(block_identifier=block);
                         let globalConf = await smg.methods.getStoremanConf().call(block_identifier=block);
                         let ii = await smg.methods.getStoremanIncentive(selectedNodes[i], m).call();
-                        let expectIncentiveSkSelf = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(smInfo.deposit).mul(web3.utils.toBN(globalConf.standaloneWeight)).divRound(web3.utils.toBN(10000))).divRound(web3.utils.toBN(groupInfoDay.depositWeight))
+                        let expectIncentiveSkSelf = ethers.BigNumber.from(groupIncentives[m]).mul(ethers.BigNumber.from(smInfo.deposit).mul(ethers.BigNumber.from(globalConf.standaloneWeight)).divRound(ethers.BigNumber.from(10000))).divRound(ethers.BigNumber.from(groupInfoDay.depositWeight))
                         if(ii != 0){
                                 console.log("- day Incentive:", m, smInfo.wkAddr, ii)
-                                let AllexpectIncentiveFromDe = web3.utils.toBN(0)
+                                let AllexpectIncentiveFromDe = ethers.BigNumber.from(0)
                                 for(let j=0; j<smInfo.delegatorCount;j++){
                                         let deAddr = await smg.methods.getSmDelegatorAddr(smInfo.wkAddr, j).call(block_identifier=block)
                                         let deInfo = await smg.methods.getSmDelegatorInfo(smInfo.wkAddr, deAddr).call(block_identifier=block)
@@ -358,13 +362,13 @@ async function checkSmgIncentive(_groupId) {
                                                 }
                                         }
                                         let deIncentive = await smg.methods.getSmDelegatorInfoIncentive(smInfo.wkAddr, deAddr, m).call()
-                                        let expectIncentiveDe = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(90)).divRound(web3.utils.toBN(100))
-                                        AllexpectIncentiveFromDe = AllexpectIncentiveFromDe.add(web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(10)).divRound(web3.utils.toBN(100)))
-                                        console.log("-- delegate incentive:", deAddr,rate(web3.utils.toBN(deIncentive), web3.utils.toBN(deInfo.deposit)), deInfo.deposit,deIncentive, expectIncentiveDe.toString(10))
-                                        basicEqual(expectIncentiveDe,web3.utils.toBN(deIncentive), "delegate incentive wrong")
+                                        let expectIncentiveDe = ethers.BigNumber.from(groupIncentives[m]).mul(ethers.BigNumber.from(deInfo.deposit)).divRound(ethers.BigNumber.from(groupInfoDay.depositWeight)).mul(ethers.BigNumber.from(90)).divRound(ethers.BigNumber.from(100))
+                                        AllexpectIncentiveFromDe = AllexpectIncentiveFromDe.add(ethers.BigNumber.from(groupIncentives[m]).mul(ethers.BigNumber.from(deInfo.deposit)).divRound(ethers.BigNumber.from(groupInfoDay.depositWeight)).mul(ethers.BigNumber.from(10)).divRound(ethers.BigNumber.from(100)))
+                                        console.log("-- delegate incentive:", deAddr,rate(ethers.BigNumber.from(deIncentive), ethers.BigNumber.from(deInfo.deposit)), deInfo.deposit,deIncentive, expectIncentiveDe.toString(10))
+                                        basicEqual(expectIncentiveDe,ethers.BigNumber.from(deIncentive), "delegate incentive wrong")
                                 }
 
-                                let AllexpectIncentiveFromPartner = web3.utils.toBN(0)
+                                let AllexpectIncentiveFromPartner = ethers.BigNumber.from(0)
                                 for(let j=0; j<smInfo.partnerCount;j++){
                                         let deAddr = await smg.methods.getSmPartnerAddr(smInfo.wkAddr, j).call(block_identifier=block)
                                         let deInfo = await smg.methods.getSmPartnerInfo(smInfo.wkAddr, deAddr).call(block_identifier=block)
@@ -375,11 +379,11 @@ async function checkSmgIncentive(_groupId) {
                                                         continue
                                                 }
                                         }
-                                        let expectIncentivePn = web3.utils.toBN(groupIncentives[m]).mul(web3.utils.toBN(deInfo.deposit)).divRound(web3.utils.toBN(groupInfoDay.depositWeight)).mul(web3.utils.toBN(globalConf.standaloneWeight)).divRound(web3.utils.toBN(10000))
+                                        let expectIncentivePn = ethers.BigNumber.from(groupIncentives[m]).mul(ethers.BigNumber.from(deInfo.deposit)).divRound(ethers.BigNumber.from(groupInfoDay.depositWeight)).mul(ethers.BigNumber.from(globalConf.standaloneWeight)).divRound(ethers.BigNumber.from(10000))
                                         AllexpectIncentiveFromPartner = AllexpectIncentiveFromPartner.add(expectIncentivePn)
                                 }
-                                console.log("-- sk incentive:", rate(web3.utils.toBN(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe)), ii, expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner).toString(10))
-                                basicEqual(web3.utils.toBN(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner), "sk incentive wrong")
+                                console.log("-- sk incentive:", rate(ethers.BigNumber.from(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe)), ii, expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner).toString(10))
+                                basicEqual(ethers.BigNumber.from(ii),expectIncentiveSkSelf.add(AllexpectIncentiveFromDe).add(AllexpectIncentiveFromPartner), "sk incentive wrong")
 
 
                         }
@@ -406,7 +410,7 @@ async function check(){
         }
 
         let selectedNodes = await smg.methods.getSelectedStoreman(_groupId).call();
-        selectedNodes = selectedNodes.map(item=>item.toLowerCase())
+        // selectedNodes = selectedNodes.map(item=>item.toLowerCase())
         console.log("getSelectedStoreman:", selectedNodes)
         let groupInfo = await smg.methods.getStoremanGroupInfo(_groupId).call(block_identifier=toBlock);
         console.log("groupInfo:", groupInfo)
@@ -513,10 +517,10 @@ function getOnefromInfo(info, wkAddr, sender, type){
         let one = sk.get(sender+type)
         if(!one){
                 one  = {
-                        "in":web3.utils.toBN(0),
-                        "partin":web3.utils.toBN(0),
-                        "out":web3.utils.toBN(0), // claim
-                        "incentive":web3.utils.toBN(0), // incentiveClaim
+                        "in":ethers.BigNumber.from(0),
+                        "partin":ethers.BigNumber.from(0),
+                        "out":ethers.BigNumber.from(0), // claim
+                        "incentive":ethers.BigNumber.from(0), // incentiveClaim
                         "type":type,
                 }
                 sk.set(sender+type,one)
@@ -537,15 +541,15 @@ async function addPartInToOwner(info, wkaddr, value){
 async function checkSmgBalance() {
         console.log("checkSmgBalance toBlock:",toBlock)
         let balanceRealSc = await web3.eth.getBalance(smgAdminAddr, toBlock)
-        let balanceSc = new BigNumber(0)
-        let depositIn = new BigNumber(0)
-        let depositOut = new BigNumber(0)
-        let incentiveOut = new BigNumber(0)
+        let balanceSc = ethers.BigNumber.from(0)
+        let depositIn = ethers.BigNumber.from(0)
+        let depositOut = ethers.BigNumber.from(0)
+        let incentiveOut = ethers.BigNumber.from(0)
 
         let info = new Map()
         let one
 
-        let crossFee =   web3.utils.toBN(new BigNumber("66970000000000000000000"))
+        let crossFee =   ethers.BigNumber.from("66970000000000000000000")
 
         console.log("crossFee total:", crossFee.toString(10))
 
@@ -553,114 +557,121 @@ async function checkSmgBalance() {
         let lastBlock = 0
         let AllWorker= new Set()
         let allDelegator = {}
-        while(true) {
-          const queryString = `
-          {
-            exampleEntities(first:1000,orderBy:block, skip:${skipNumber}) {
-              id
-              action
-              count
-              block
-              wkAddr
-              sender
-            }
-          }
-          `
-          const body = {query: queryString, variable:""}
-          let ret = await axios.post(APIURL, JSON.stringify(body));
-          let events = ret.data.data.exampleEntities
-          console.log("events length:", events.length, skipNumber)
-          skipNumber += 1000
+        const smgDeployedBlock = 11284537
+        let finishedBlock = 0
+        const eventStep = 1000000
+        let fromBlock = smgDeployedBlock;
+        let endBlock = fromBlock + eventStep
+        if(endBlock > toBlock) endBlock = toBlock
+
+        while(fromBlock < toBlock) {
+        //   const queryString = `
+        //   {
+        //     exampleEntities(first:1000,orderBy:block, skip:${skipNumber}) {
+        //       id
+        //       action
+        //       count
+        //       block
+        //       wkAddr
+        //       sender
+        //     }
+        //   }
+        //   `
+        //   const body = {query: queryString, variable:""}
+        //   let ret = await axios.post(APIURL, JSON.stringify(body));
+        //   console.log("ret.data.data:", ret.data)
+        //   let events = ret.data.data.exampleEntities
+        let events = await smgE.queryFilter('*', fromBlock, endBlock);
+
+
+          console.log("events length:", events.length, fromBlock, endBlock)
           for(let i=0; i<events.length; i++){
                 let event = events[i]
-                if(event.block > toBlock ) {
-                        continue // ignore too new block
-                }
-                //console.log("eent:", event, web3.utils.toBN(event.count).toString(10))
-                switch(event.action){
+                // console.log("event:", event)
+                switch(event.event){
                         case "stakeInEvent":
-                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
-                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
-                                one.in = one.in.add(web3.utils.toBN(event.count))
-                                AllWorker.add(event.wkAddr)
+                                balanceSc = balanceSc.add(event.args.value)
+                                depositIn = depositIn.add(event.args.value)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 1)
+                                one.in = one.in.add(event.args.value)
+                                AllWorker.add(event.args.wkAddr)
                                 break
                         case "stakeAppendEvent":
-                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
-                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr,event.sender, 1)
-                                one.in = one.in.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.add(event.args.value)
+                                depositIn = depositIn.add(event.args.value)
+                                one = getOnefromInfo(info, event.args.wkAddr,event.args.from, 1)
+                                one.in = one.in.add(event.args.value)
                                 break
                         case "delegateInEvent":
-                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
-                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
-                                one.in = one.in.add(web3.utils.toBN(event.count))
-                                allDelegator[event.wkAddr+event.sender] = [event.wkAddr, event.sender]
+                                balanceSc = balanceSc.add(event.args.value)
+                                depositIn = depositIn.add(event.args.value)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 2)
+                                one.in = one.in.add(event.args.value)
+                                allDelegator[event.args.wkAddr+event.args.from] = [event.args.wkAddr, event.args.from]
                                 break
                         case "partInEvent":
-                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
-                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
-                                one.in = one.in.add(web3.utils.toBN(event.count))
-                                addPartInToOwner(info, event.wkAddr, web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.add(event.args.value)
+                                depositIn = depositIn.add(event.args.value)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 3)
+                                one.in = one.in.add(event.args.value)
+                                addPartInToOwner(info, event.args.wkAddr, event.args.value)
                                 break      
                         case "storemanGroupContributeEvent":
-                                depositIn = depositIn.plus(web3.utils.toBN(event.count))
-                                balanceSc = balanceSc.plus(web3.utils.toBN(event.count))
+                                depositIn = depositIn.add(event.args.value)
+                                balanceSc = balanceSc.add(event.args.value)
                                 break                                
                         case "stakeClaimEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
-                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
-                                one.out = one.out.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.value)
+                                depositOut = depositOut.add(event.args.value)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 1)
+                                one.out = one.out.add(event.args.value)
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateClaimEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
-                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
-                                one.out = one.out.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.amount)
+                                depositOut = depositOut.add(event.args.amount)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 2)
+                                one.out = one.out.add(event.args.amount)
 
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "partClaimEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
-                                depositOut = depositOut.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 3)
-                                one.out = one.out.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.amount)
+                                depositOut = depositOut.add(event.args.amount)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.from, 3)
+                                one.out = one.out.add(event.args.amount)
                                 assert.ok(one.in.eq(one.out))
                                 break                                  
                         case "delegateIncentiveClaimEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
-                                incentiveOut = incentiveOut.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 2)
-                                one.incentive = one.incentive.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.amount)
+                                incentiveOut = incentiveOut.add(event.args.amount)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.sender, 2)
+                                one.incentive = one.incentive.add(event.args.amount)
                                 assert.ok(one.incentive.lt(one.in))
                                 break                                  
                         case "stakeIncentiveClaimEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
-                                incentiveOut = incentiveOut.plus(web3.utils.toBN(event.count))
-                                one = getOnefromInfo(info, event.wkAddr, event.sender, 1)
-                                one.incentive = one.incentive.add(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.amount)
+                                incentiveOut = incentiveOut.add(event.args.amount)
+                                one = getOnefromInfo(info, event.args.wkAddr, event.args.sender, 1)
+                                one.incentive = one.incentive.add(event.args.amount)
 
                                 if(!one.incentive.lt(one.in.add(one.partin))){
-                                        console.log("one:", event.wkAddr, event.sender, one)
+                                        console.log("stakeIncentiveClaimEvent large one:", event.args.wkAddr, event.args.sender, one)
                                 }
                                         
                                 assert.ok(one.incentive.lt(one.in.add(one.partin)))
                                 break                                  
                         case "stakeIncentiveCrossFeeEvent":
-                                balanceSc = balanceSc.minus(web3.utils.toBN(event.count))
+                                balanceSc = balanceSc.sub(event.args.amount)
                                 break                                  
                                                                                                                                                         
 
                 }
-            }
-                if(events.length < 1000) {
-                        break
-                }
+          }
+          fromBlock = endBlock+1
+          endBlock = fromBlock + eventStep
+          if(endBlock > toBlock) endBlock = toBlock
         }
       
         fs.writeFileSync("./allDelegator.json", JSON.stringify(Object.values(allDelegator)))
@@ -668,7 +679,7 @@ async function checkSmgBalance() {
         fs.writeFileSync("./AllWorker.json", JSON.stringify(Array.from(AllWorker)))
         
         console.log("++++++++++++++++++++++++++++++++++++++++++++++:", depositIn.toString(), depositOut.toString(), incentiveOut.toString())
-        balanceSc = balanceSc.plus(crossFee)
+        balanceSc = balanceSc.add(crossFee)
         console.log("real balance of smg:", balanceRealSc)
         console.log("calculated balance of smg:", balanceSc.toString(10))
         let result = true
@@ -711,7 +722,7 @@ async function checkSmgBalance() {
                                 result = false
                                 one.isOk = false
                         }
-                        if(!node.incentive.mul(web3.utils.toBN(1)).lt(node.in.add(node.partin))){
+                        if(!node.incentive.mul(ethers.BigNumber.from(1)).lt(node.in.add(node.partin))){
                                 result = false
                                 one.isOk = false
                                 console.log("total incentive great than deposit, one:", one)
